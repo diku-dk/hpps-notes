@@ -10,3 +10,9 @@ jobs:
         uses: xu-cheng/latex-action@v2
         with:
           root_file: notes.tex
+          latexmk_shell_escape: true
+      - name: upload PDF
+        uses: actions/upload-artifact@v2
+        with:
+          name: PDF
+          path: notes.pdf
