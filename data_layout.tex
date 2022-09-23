@@ -1,0 +1,334 @@
+\lstset{language=C}
+
+\chapter{Data Layout}
+
+One of the things that makes C a difficult programming language is
+that it does not provide many built-in data types, and provides poor
+support for making it convenient to work with new data types.  In
+particular, C has notoriously poor support for multi-dimensional
+arrays.  Given that multi-dimensional arrays are perhaps the single
+most important data structure for scientific computing, this is not
+good.  In this chapter we will look at how we \textit{encode}
+mathematical objects such as matrices (two-dimensional arrays) with
+the tools that C makes available to us.  One key point is that there
+are often multiple ways to represent the same object, with different
+pros and cons, depending on the situation.
+
+\section{Arrays in C}
+
+At the surface level, C does support arrays.  We can declare a
+$n\times{}m$ array as
+\begin{lstlisting}
+double A[n][m];
+\end{lstlisting}
+and then use the fairly straightforward \lstinline{A[i][j]} syntax to
+read a given element.  However, C's arrays are a second-class language
+construct in many ways:
+
+\begin{itemize}
+\item They decay to pointers in many situations.
+\item They cannot be passed to a function without ``losing'' their
+  size.
+\item They cannot be returned from a function at all.
+\end{itemize}
+
+In practice, we tend to only use language-level arrays in very simple
+cases, where the sizes are statically known, and they are not passed
+to or from functions.  For general-purpose usage, we instead build our
+own representation of multi-dimensional arrays, using C's support for
+\textit{pointers} and \textit{dynamic allocation}.  Since actual
+machine memory is essentially a single-dimensional array, working with
+multi-dimensional arrays in C really just requires us to answer one
+central question:
+\begin{center}
+  \textbf{How do we map a multi-dimensional index to a
+    single-dimensional index?}
+\end{center}
+Or to put it another way, representing a $d$-dimensional array in C
+requires us to define a bijective\footnote{A bijective function is a
+  function between two sets that maps each element of each set to a
+  distinct element of the other set.} \textit{index function}
+\begin{equation}
+  I : \mathbb{N}^{d} \rightarrow \mathbb{N}
+\end{equation}
+
+The index function maps from our (mathematical, conceptual)
+multi-dimensional space to the one-dimensional memory space offered by
+an actual computer.  This is sometimes also called \textit{unranking},
+although this is strictly speaking a more general term from
+combinatorics.
+
+As an example, suppose we wish to represent the following $3\times{}4$ matrix in memory:
+
+\begin{equation}
+  \begin{pmatrix}
+    11 & 12 & 13 & 14 \\
+    21 & 22 & 23 & 24 \\
+    31 & 32 & 33 & 34
+  \end{pmatrix}
+\label{eqn:matA}
+\end{equation}
+
+We can do this in any baroque way we wish, but the two most common
+representations are:
+
+\begin{description}
+\item[\textbf{Row-major order},] where elements of each \textit{row} are
+  contiguous in memory:
+
+  \begin{center}
+  \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|}
+    \hline
+    11&12&13&14&21&22&23&24&31&32&33&34\\
+    \hline
+  \end{tabular}
+  \end{center}
+
+  with index function
+  \[
+    (i,j) \mapsto i\times 4 + j
+  \]
+\item[\textbf{Column-major order},] where elements of each \textit{column}
+  are contiguous in memory:
+
+  \begin{center}
+  \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|}
+    \hline
+    11&21&31&12&22&32&13&23&33&14&24&34\\
+    \hline
+  \end{tabular}
+  \end{center}
+
+  with index function
+  \[
+    (i,j) \mapsto j\times 3 + i
+  \]
+\end{description}
+
+The index functions are generalised on \cref{fig:indexfunctions}.
+Note that the two representations contain the exact same values, so
+they encode the same mathematical object, but in different ways.  The
+intuition for the row-major index function is that we first skip $i$
+rows ahead to get to the row of interest, then move $j$ columns into
+the row.
+
+Row-major order is used by default in most programming languages and
+libraries, but not universally so---the scientific language Fortran is
+famously column-major.  The NumPy library for Python uses row-major by
+default (called \texttt{C} in Numpy), but one can explicitly ask for
+arrays in column-major order (called \texttt{F}), which is sometimes
+needed when exchanging data with systems that expect a different
+representation.
+
+\begin{figure*}
+  \centering
+
+  \begin{subfigure}[b]{0.45\textwidth}
+    \begin{equation}
+      (i,j) \mapsto i\times m + j \label{eqn:idx2row}
+    \end{equation}
+    \caption{Row-major indexing.}
+    \label{fig:rowmajor}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.45\textwidth}
+    \begin{equation}
+      (i,j) \mapsto j\times n + i \label{eqn:idx2col}
+    \end{equation}
+    \caption{Column-major indexing.}
+    \label{fig:colmajor}
+  \end{subfigure}
+
+  \caption{Index functions for $n\times{}m$ arrays represented in
+    row-major and column-major order.  For an example of why computer
+    scientists tend to prefer 0-indexing, try rewriting the above to
+    work with 1-index arrays instead.}
+  \label{fig:indexfunctions}
+\end{figure*}
+
+\subsection{Implementation in C}
+
+Let's look at how to implement this in C.  Let's say we wish to
+represent the matrix from \cref{eqn:matA} in row-major order.  Then we
+would write the following (assuming \texttt{n=3}, \texttt{m=4}):
+
+\begin{lstlisting}
+int *A = malloc(n*m*sizeof(int));
+A[0] = 11;
+A[1] = 12;
+...
+A[11] = 34;
+\end{lstlisting}
+
+Note that even though we \textit{conceptually} wish to represent a
+two-dimensional array, the actual C type is technically a
+single-dimensional array with 12 elements.  If we when wish to index
+at position $(i,j)$ we then use the expression \lstinline{A[i*4+j]}.
+
+Similarly, if we wished to use column-major order, we would program as
+follows:
+
+\begin{lstlisting}
+int *A = malloc(n*m*sizeof(int));
+A[0] = 11;
+A[1] = 21;
+...
+A[11] = 34;
+\end{lstlisting}
+
+To C there is no difference---and there is no indication in the types
+what we intended.  This makes it very easy to make mistakes.
+
+Note also how it is on \textit{us} to keep track of the sizes of the
+array---C is no help.  Don't make the mistake of thinking that
+\lstinline{sizeof(A)} will tell you how big this array is---while C
+will produce a number for you, it willindicate the size of a
+\textit{pointer} (probably 8 on your machine).
+
+Some C programmers like defining functions to help them generate the
+flat indexes when indexing arrays:
+
+\begin{lstlisting}
+int idx2_rowmajor(int n, int m, int i, int j) {
+  return i * m + j;
+}
+
+int idx2_colmajor(int n, int m, int i, int j) {
+  return j * n + i;
+}
+\end{lstlisting}
+
+Note how row-major indexing does not use the \texttt{n} parameter, and
+column-major indexing does not use \texttt{m}.
+
+However, these functions do not on their own fully prevent us from
+making mistakes.  Consider indexing the \texttt{A} array from before
+with the expression
+
+\begin{center}
+\lstinline{A[idx2_rowmajor(n, m, 2, 5)]}.
+\end{center}
+
+Here we are trying to access index $(2,5)$ in a $3\times{}4$
+array---which is conceptually an out-of-bounds access.  However, by
+the index function, this translates to the flat index
+$2\times{}3+5=11$, which is in-bounds for the 12-element array we use
+for our representation in C.  This means that handy tools like
+\texttt{valgrind} will not even be able to detect our mistake---from
+C's point of view, we're doing nothing wrong!  Things like this make
+scientific computing in C a risky endeavour.  We can protect ourselves
+by using helper functions like those above, and augment them with
+\texttt{assert} statements that check for problems:
+
+\begin{lstlisting}
+int idx2_rowmajor(int n, int m, int i, int j) {
+  assert(i >= 0 && i < n);
+  assert(j >= 0 && j < m);
+  return i * m + j;
+}
+\end{lstlisting}
+
+We can still make mistakes, but at least now they will be noisy,
+rather than silently reading (or corrupting!) unintended data.
+
+\subsection{Size passing}
+\label{sec:sizepassing}
+
+With the previously discussed representation, a multidimensional array
+(e.g. a matrix) is just a pointer to the data, along with metadata
+about its size.  The C language does not help us keep this metadata in
+sync with reality.  When passing one of these arrays to a function, we
+must manually pass along the sizes, and we must get them right without
+much help from the compiler.  For example, consider a function that
+sums each row of a (row-major) $n\times{}m$ array, saving the results
+to an $n$-element output array:
+
+\lstinputlisting[
+caption={Summing the rows of a matrix.},
+label={lst:sumrows.c},
+language=C,
+frame=single]
+{src/sumrows.c}
+
+C gives us the raw building blocks of efficient computation, but we
+must put together the pieces ourselves.  We protect ourselves by
+carefully documenting the data layout expected of the various
+functions.  For the \texttt{sumrows} function above, we would document
+that \texttt{matrix} is expected to be a row-major array of size
+$n\times{}m$.
+
+\subsection{Slicing}
+\label{sec:slicing}
+
+In high-level languages like Python, we can use notation such as
+\texttt{A[i:j]} to extract a \textit{slice} (a contiguous subsequence)
+of an array, in this case of the elements from index \texttt{i} to
+\texttt{j}.  No such syntactical niceties are available in C, but by
+using our knowledge of how arrays are physically laid out in memory,
+we can obtain a similar effect in many cases.
+
+Suppose \texttt{V} is a vector of \texttt{n} elements, and we wish to
+obtain a slice of the elements from index \texttt{i} to \texttt{j}
+(the latter exclusive).  In Python, we would merely write
+\texttt{V[i:j]}.  In C, we compute the size of the slice as
+\begin{lstlisting}
+int m = j - i;
+\end{lstlisting}
+and then compute a pointer to the start of the slice:
+\begin{lstlisting}
+double *slice = &V[i];
+\end{lstlisting}
+Now we can treat \texttt{slice} as an \texttt{m}-element array that
+just happens to use the same underlying storage as \texttt{V}.  This
+means that we must be careful not to deallocate \texttt{V} while
+\texttt{slice} is still in use.
+
+Similarly, if \texttt{A} represents a matrix of size \texttt{n} by
+\texttt{m} in row-major order, then we can produce a vector
+representing the \texttt{i}th row as follows:
+\begin{lstlisting}
+double *row = &A[i*m];
+\end{lstlisting}
+The restriction is that such slicing can only produce arrays whose
+elements are \emph{contiguous} in memory.  For example, we cannot
+easily extract a column of a row-major array, because the elements of
+a column are not contiguous in memory.  If we wish to extract a
+column, then we have to allocate space and copy element-by-element, in
+a loop\footnote{There are more sophisticated array representations
+  that use \textit{strides} to allow array elements that are not
+  contiguous in memory---NumPy uses these, but they are outside the
+  scope of our course.}.
+
+\subsection{Even higher dimensions}
+
+The examples so far have focused on the two-dimensional case.
+However, the notion of row-major and column-major order generalises
+just fine to higher dimensions.  The key distinction is that in a row-major
+array, the \textit{last} dimension is contiguous, while for a
+column-major array, the \textit{first} dimension is contiguous.  For a
+row-major array of shape $n_{0} \times{} \cdots \times{} n_{d-1}$, the
+index function where $p$ is a $d$-dimensional index point is
+
+\begin{equation}
+  p \mapsto \sum_{0 \leq i < d} p_{i} \prod_{i<j<d} n_{j}
+  \label{eqn:idxDrow}
+\end{equation}
+
+where $p_{i}$ gets the $i$th coordinate of $p$, and the product of an
+empty series is $1$.
+
+Similarly, for a column-major array, the index function is
+
+\begin{equation}
+  p \mapsto \sum_{0 \leq i < d} p_{i} \prod_{0\leq j<i} n_{j}
+\end{equation}
+
+We can also have more complex cases, such as a three-dimensional array
+where the two-dimensional ``rows'' are stored consecutively, but are
+individually column-major.  Such constructions can be useful, but are
+beyond the scope of this course (and are a nightmare to implement).
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "notes"
+%%% End:

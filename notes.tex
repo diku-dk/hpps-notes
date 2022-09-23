@@ -1,0 +1,72 @@
+\documentclass[oneside]{memoir}
+
+\setsecnumdepth{subsection}
+
+\usepackage[utf8]{inputenc}
+\usepackage{ntheorem}
+\usepackage{amsmath}[ntheorem]
+\usepackage{amsfonts}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{todonotes}
+\usepackage{url}
+\usepackage{hyperref}
+
+\usepackage{cleveref}
+
+\usepackage{couriers}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily}
+
+% Teach cleveref about listings.
+\crefname{lstlisting}{listing}{listings}
+\Crefname{lstlisting}{Listing}{Listings}
+
+\title{Course notes for High Performance Programming and Systems}
+\author{Troels Henriksen, David Gray Marchant, Kenneth Skovhede} \date{\today}
+
+\newtheorem{definition}{Definition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{theorem}{Theorem}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+These notes are written to supplement the textbooks in the course
+\textit{High Performance Programming and Systems}.  Consider them
+terminally in-progress.  These notes are not a textbook, do not cover
+the entire curriculum, and might not be comprehensible if isolated
+from the course and its other teaching activities.
+
+\newpage
+\tableofcontents
+
+\input{compiled_interpreted.tex}
+
+\input{data_layout.tex}
+
+\input{network.tex}
+
+\input{openmp.tex}
+
+\input{scaling.tex}
+
+\input{dependencies.tex}
+
+\input{transformations.tex}
+
+\newpage
+
+\bibliographystyle{plain}
+\bibliography{notes}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

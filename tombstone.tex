@@ -1,0 +1,76 @@
+% Improved version of
+% http://blog.sterex.de/2013/04/latex-macro-for-tombstone-diagrams/
+\def\tcompiler(from #1 to #2 in #3){%
+  \begin{picture}(100,50)
+
+    \put (0,50)  {\line(1,0)   {100}}
+    \put (0,25)  {\line(0,1)   {25}}
+    \put (100,50) {\line(0,-1) {25}}
+
+    % __   __ T bottom elements
+    \put (100,25) {\line(-1,0) {35}}
+    \put (0, 25)  {\line(1,0)  {35}}
+
+    % |  | left and right
+    \put (35,25)  {\line(0,-1) {25}}
+    \put (65,25)  {\line(0,-1) {25}}
+
+    % |__| bottom
+    \put (35,0)   {\line(1,0)  {30}}
+
+    % From -> To
+    \put(10,37){\makebox(0,0) {#1}}
+    \put(50,37){\makebox(0,0) {$\rightarrow$}}
+    \put(80,37){\makebox(0,0) {#2}}
+
+    % In
+    \put(50,10){\makebox(0,0) {#3}}
+  \end{picture}
+}
+
+\def\tmachine(#1){%
+  \begin{picture}(30,25)
+    \put (0,25)  {\line(1,0)   {30}}
+    \put (0,25)  {\line(2,-3)  {15}}
+    \put (30,25) {\line(-2,-3) {15}}
+
+    \put (15,20) {\makebox(0,0) {#1}}
+  \end{picture}
+}
+
+\def\tprog(#1 in #2){%
+  \begin{picture}(50,45)
+    % Upper trapezoid
+    \put (10,25)  {\line(-1,2)  {10}}
+    \put (40,25) {\line(1,2)   {10}}
+    \put (0,45) {\line(1,0)  {50}}
+    \put (25,35) {\makebox(0,0) {#1}}
+
+    % Lower box
+    \put (10,0)  {\line(1,0)  {30}}
+    \put (10,0)  {\line(0,1)  {25}}
+    \put (40,0) {\line(0,1)  {25}}
+    \put (25,13) {\makebox(0,0) {#2}}
+  \end{picture}
+}
+
+\def\tinter(#1 in #2){%
+  \begin{picture}(30,50)
+    % Upper box
+    \put (0,25)  {\line(0,1)  {25}}
+    \put (0,50)  {\line(1,0)  {30}}
+    \put (30,25) {\line(0,1)  {25}}
+    \put (15,38) {\makebox(0,0) {#1}}
+
+    % Lower box
+    \put (0,0)  {\line(1,0)  {30}}
+    \put (0,0)  {\line(0,1)  {25}}
+    \put (30,0) {\line(0,1)  {25}}
+    \put (15,13) {\makebox(0,0) {#2}}
+  \end{picture}
+}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "notes"
+%%% End:

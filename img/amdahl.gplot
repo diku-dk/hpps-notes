@@ -1,0 +1,14 @@
+set output "amdahl.pdf"
+set terminal pdf
+set key left top
+set xlabel "Number of processors"
+set ylabel "Speedup"
+amdahl(p,N) = 1/((1-p)+(p/N))
+plot [1:300] \
+     amdahl(0.99,x) title "p=0.99" lw 3, \
+     amdahl(0.98,x) title "p=0.98" lw 3, \
+     amdahl(0.97,x) title "p=0.97" lw 3, \
+     amdahl(0.96,x) title "p=0.96" lw 3, \
+     amdahl(0.95,x) title "p=0.95" lw 3, \
+     amdahl(0.90,x) title "p=0.90" lw 3, \
+     amdahl(0.50,x) title "p=0.50" lw 3
