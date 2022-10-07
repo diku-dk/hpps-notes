@@ -1,0 +1,32 @@
+% General stuff.  The idea is that this preample can also be used to
+% compile each chapter separately.
+
+\usepackage[utf8]{inputenc}
+\usepackage{ntheorem}
+\usepackage{amsmath}[ntheorem]
+\usepackage{amsfonts}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{todonotes}
+\usepackage{url}
+\usepackage{hyperref}
+
+\usepackage{cleveref}
+
+\usepackage{couriers}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily}
+
+% Teach cleveref about listings.
+\crefname{lstlisting}{listing}{listings}
+\Crefname{lstlisting}{Listing}{Listings}
+
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{corollary}[theorem]{Corollary}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "notes"
+%%% End:

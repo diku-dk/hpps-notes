@@ -1,34 +1,9 @@
 \documentclass[oneside]{memoir}
 
-\setsecnumdepth{subsection}
-
-\usepackage[utf8]{inputenc}
-\usepackage{ntheorem}
-\usepackage{amsmath}[ntheorem]
-\usepackage{amsfonts}
-\usepackage{caption}
-\usepackage{subcaption}
-\usepackage{graphicx}
-\usepackage{todonotes}
-\usepackage{url}
-\usepackage{hyperref}
-
-\usepackage{cleveref}
-
-\usepackage{couriers}
-\usepackage{listings}
-\lstset{basicstyle=\ttfamily}
-
-% Teach cleveref about listings.
-\crefname{lstlisting}{listing}{listings}
-\Crefname{lstlisting}{Listing}{Listings}
+\input{preample.tex}
 
 \title{Course notes for High Performance Programming and Systems}
 \author{Troels Henriksen, David Gray Marchant, Kenneth Skovhede} \date{\today}
-
-\newtheorem{definition}{Definition}
-\newtheorem{corollary}{Corollary}
-\newtheorem{theorem}{Theorem}
 
 \begin{document}
 
