@@ -1,0 +1,176 @@
+\chapter{Data as bits}
+\label{chap:bits}
+
+A computer is a machine for transforming information.  Machines
+inevitably must operate on things that physically exist, so in order
+to process information in a machine, we must \emph{represent} the
+information in some physical way.  While we stop short of discussing
+precisely the physical phenomena that underlie modern computers, we
+will look at the notion of \emph{value encodings}---how mathematical
+objects can be represented such that they can be processed by
+machines.
+
+\section{A bit}
+
+\begin{definition}[Bit]
+  A bit (\emph{binary digit}) is a logical state that can represent two possible values,
+  which we write as $1$ or $0$.
+\end{definition}
+
+Conventionally, and in this text, the two possible values are written
+$1$ and $0$, as a reference to their interpretation as numbers, but
+this merely a question of notation.  We could equally well have used
+\emph{true}/\emph{false}, \emph{a}/\emph{b}, \emph{yes}/\emph{no}, or
+anything else that allows us to distinguish unambiguously between the
+two possible values.
+
+Bits are used in information theory as a unit of information.  For
+computers, bits are convenient because any physical phenomenon that
+can be interpreted as having two states can be used to represent a
+bit.  For example:
+\begin{enumerate}
+\item High or low voltage in an electrical wire.
+\item Absence or presence of a hole in some material.
+\item Vertical or horizontal polarity of light.
+\item Heads or tails of a coin.
+\item Whether a cup is full or empty.
+\item Whether a corridor is full of soldier crabs or
+  not~\cite{gunji2011robust}.
+\end{enumerate}
+Some of these representations are more practical than others, but all
+are ultimately based on the notion of a \emph{bit}.  The choice of
+which representation is most practical in a given setting is largely
+based on how we can construct machinery that manipulates the physical
+representation of the bits.  Modern computers are overwhelmingly
+electronic, and use \emph{transistors} to transform electrical signals
+representing bits, but optical representations are also common for
+long-distance communications.
+
+\subsection{Bit vectors}
+
+\newcommand\bitvector[1]{\langle #1 \rangle}
+\newcommand\bitconcat{\frown}
+
+Single bits rarely occur in isolation.  Typically we use a sequence of
+bits, called a \emph{bit vector}.
+
+\begin{definition}[Bit vector]
+  A bit vector of length $w$ is an ordered sequence of $w$ bits, which
+  we write as $\bitvector{x_{w-1}\ldots{}x_{0}}$.
+\end{definition}
+
+Note that the convention is that bit $x_{0}$ in a bit vector is
+written at the \emph{rightmost} position.  This is again merely a
+convention, but done to resemble the ordering of digits in
+mathematical notation.
+
+\begin{definition}[Concatenation of bit vectors]
+  This is written with the $\bitconcat$ operator and defined as
+  follows:
+  \[
+    \bitvector{x_{n-1}\ldots{}x_{0}} \bitconcat \bitvector{y_{m-1}\ldots{}y_{0}} =
+    \bitvector{x_{n-1}\ldots{}x_{0}~y_{m-1}\ldots{}y_{0}}
+  \]
+\end{definition}
+
+
+Bit vectors can be interpreted as representing various mathematical
+objects.  We will initially be representing values that look very
+similar to bits, and the following may seem unnecessarily long-winded
+and ceremonious, but eventually we will look at more complicated
+encodings.  It is best to quickly establish a firm distinction between
+the \emph{encoding} of some mathematical object (say, a number) as a
+bit vector, and the actual mathematical object.  This is done by
+defining a pair of \emph{conversion} functions between the set of bit
+vectors, which we denote $\mathbb{B}*$, and the mathematical set we
+wish to encode, say the natural numbers $\mathbb{N}$.
+
+\subsection{Example: Bit vectors as natural numbers}
+
+One of the most obvious ways to interpret a bit vector is as a number
+in base 2.  For example, the bit vector $\bitvector{1001}$ represents
+the number $1001_{2} = 9_{10}$.  Note the subscripts used to denote
+the \emph{radix} of the literals---we will include these whenever the
+radix would otherwise be ambiguous.  However, it is important to note
+that a $\bitvector{1001}$ \emph{is not the same} as $1001_{2}$!  They
+are objects in completely different domains, and it makes no sense to
+say that they are equal or unequal.  It is merely a quirk of notation
+that we write them in superficially similar ways, and we shall soon
+enough see encodings where this is not the case.
+
+To completely specify the encoding of natural numbers, we first define
+how a bit vector of length $w$ is interpreted as a number.  Here we do
+treat single bits as numbers, by multiplying them with a
+\emph{weight}.
+
+\[
+    Bits2N(\bitvector{x_{w-1}\cdots x_{0}})  = \sum_{i=0}^{w} x_{0} \cdot{} 2^{i}
+\]
+
+The conversion of a number to a bit vector is slightly less pleasant,
+and is defined by the following recursive procedure.
+
+\[
+  \begin{array}{rcl}
+    N2Bits(0)  &=& \bitvector{0} \\
+    N2Bits(2\cdot{}x + 0) &=& N2Bits(x)\bitconcat\bitvector{0} \\
+    N2Bits(2\cdot{}x + 1) &=& N2Bits(x)\bitconcat\bitvector{1} \\
+  \end{array}
+\]
+
+By applying these equations, we can for example show that
+\[
+  N2Bits(9)=\bitvector{1001}
+\]
+---not terribly surprising.
+
+Having an encoding of numbers is not terribly useful unless we can
+also perform \emph{operations}, such as arithmetic, on numbers
+represented in the given encoding.  However, before we can do that, we
+have to talk about Boolean logic.
+
+\section{Boolean logic}
+\label{sec:boolean-logic}
+
+While numbers are one of the most interesting things we can encode as
+bit vectors, we will start out by interpreting bits as truth values.
+\emph{Truth} as a subject of computation was investigated by the
+English mathematician George Boole (1815-1864), whose Boolean logic
+far predates the modern notions of computers and bits.
+
+\subsection{Encoding Boolean values as bit vectors}
+
+From the Boolean perspective, we view single-element bit vectors as
+encoding the values \emph{true} or \emph{false}, which we write as $T$
+and $F$.  We start out by defining \emph{encoding} and \emph{decoding}
+functions that map between bit vectors and Boolean values.
+
+\begin{definition}[Truth values as bit vectors]
+
+  A single truth value is encoded as a single-element bit vector.
+
+  \[
+    \begin{array}{rcl}
+      bool2bits(T) & = & \bitvector{1} \\
+      bool2bits(F) & = & \bitvector{0} \\
+      bits2bool(\bitvector{1}) & = & T \\
+      bits2bool(\bitvector{0}) & = & F \\
+    \end{array}
+  \]
+\end{definition}
+
+Just as we can define operators on \emph{numbers} (such as addition),
+we can define operations on \emph{truth values} (such as ``bitwise
+and'').
+
+\newcommand\bitand{\&}
+\newcommand\bitor{\|}
+\newcommand\bitxor{\oplus}
+
+\section{Bit arithmetic}
+\label{sec:bit-arithmetic}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "notes"
+%%% End:
