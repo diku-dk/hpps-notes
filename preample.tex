@@ -2,9 +2,15 @@
 % compile each chapter separately.
 
 \usepackage[utf8]{inputenc}
+
 \usepackage{ntheorem}
 \usepackage{amsmath}[ntheorem]
+\usepackage{mathtools}
 \usepackage{amsfonts}
+
+\newcommand{\defeq}{\vcentcolon=}
+\newcommand\lxor{\oplus}
+
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{graphicx}
@@ -25,6 +31,7 @@
 \newtheorem{definition}{Definition}[chapter]
 \newtheorem{theorem}{Theorem}[chapter]
 \newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{example}{Example}[chapter]
 
 \setsecnumdepth{subsection}
 

@@ -11,6 +11,7 @@ objects can be represented such that they can be processed by
 machines.
 
 \section{A bit}
+\label{sec:bit}
 
 \begin{definition}[Bit]
   A bit (\emph{binary digit}) is a logical state that can represent two possible values,
@@ -65,8 +66,8 @@ convention, but done to resemble the ordering of digits in
 mathematical notation.
 
 \begin{definition}[Concatenation of bit vectors]
-  This is written with the $\bitconcat$ operator and defined as
-  follows:
+  We denote concatenation with the $\bitconcat$ operator and define it
+  the obvious way, as follows:
   \[
     \bitvector{x_{n-1}\ldots{}x_{0}} \bitconcat \bitvector{y_{m-1}\ldots{}y_{0}} =
     \bitvector{x_{n-1}\ldots{}x_{0}~y_{m-1}\ldots{}y_{0}}
@@ -74,18 +75,19 @@ mathematical notation.
 \end{definition}
 
 
-Bit vectors can be interpreted as representing various mathematical
+Bit vectors can be interpreted as encoding various mathematical
 objects.  We will initially be representing values that look very
 similar to bits, and the following may seem unnecessarily long-winded
 and ceremonious, but eventually we will look at more complicated
-encodings.  It is best to quickly establish a firm distinction between
-the \emph{encoding} of some mathematical object (say, a number) as a
-bit vector, and the actual mathematical object.  This is done by
-defining a pair of \emph{conversion} functions between the set of bit
-vectors, which we denote $\mathbb{B}*$, and the mathematical set we
-wish to encode, say the natural numbers $\mathbb{N}$.
+encodings.  The goal is to establish a firm distinction between the
+\emph{encoding} of some mathematical object (say, a number) as a bit
+vector, and the mathematical object itself.  Such an encoding is
+defined by specifying a pair of \emph{conversion} functions between
+the set of bit vectors, which we denote $\mathbb{B}^{*}$, and the
+mathematical set we wish to encode, say the natural numbers
+$\mathbb{N}$.
 
-\subsection{Example: Bit vectors as natural numbers}
+\subsection{Bit vectors as natural numbers}
 
 One of the most obvious ways to interpret a bit vector is as a number
 in base 2.  For example, the bit vector $\bitvector{1001}$ represents
@@ -95,34 +97,50 @@ radix would otherwise be ambiguous.  However, it is important to note
 that a $\bitvector{1001}$ \emph{is not the same} as $1001_{2}$!  They
 are objects in completely different domains, and it makes no sense to
 say that they are equal or unequal.  It is merely a quirk of notation
-that we write them in superficially similar ways, and we shall soon
-enough see encodings where this is not the case.
+that they look similar when written down, and we shall soon enough see
+encodings where this is not the case.
 
-To completely specify the encoding of natural numbers, we first define
+To completely specify the encoding of natural numbers, we must define
 how a bit vector of length $w$ is interpreted as a number.  Here we do
-treat single bits as numbers, by multiplying them with a
+treat single bits as numbers, $0$ or $1$, and multiplying them with a
 \emph{weight}.
 
-\[
-    Bits2N(\bitvector{x_{w-1}\cdots x_{0}})  = \sum_{i=0}^{w} x_{0} \cdot{} 2^{i}
-\]
+\begin{equation}
+    Bits2N(\bitvector{x_{w-1}\cdots x_{0}}) \defeq \sum_{i=0}^{w} x_{i} \cdot{} 2^{i}
+\end{equation}
+
+\begin{example}
+  \[
+    \begin{array}{rcl}
+      Bits2N(\bitvector{1101}) & = & 1 \cdot 2^{0} + 0 \cdot 2^{1} + 1 \cdot 2^{2} + 1 \cdot 2^{3} \\
+                               & = & 13
+    \end{array}
+  \]
+\end{example}
 
 The conversion of a number to a bit vector is slightly less pleasant,
-and is defined by the following recursive procedure.
+and is defined by the following equations, which together define a
+recursive procedure.
 
-\[
-  \begin{array}{rcl}
-    N2Bits(0)  &=& \bitvector{0} \\
-    N2Bits(2\cdot{}x + 0) &=& N2Bits(x)\bitconcat\bitvector{0} \\
-    N2Bits(2\cdot{}x + 1) &=& N2Bits(x)\bitconcat\bitvector{1} \\
-  \end{array}
-\]
+  \begin{align}
+    N2Bits(0) \defeq & \bitvector{0} \\
+    N2Bits(1) \defeq & \bitvector{1} \\
+    N2Bits(2\cdot{}x + 0) \defeq & N2Bits(x)\bitconcat\bitvector{0} \\
+    N2Bits(2\cdot{}x + 1) \defeq & N2Bits(x)\bitconcat\bitvector{1}
+  \end{align}
 
 By applying these equations, we can for example show that
-\[
-  N2Bits(9)=\bitvector{1001}
-\]
----not terribly surprising.
+\begin{align*}
+  N2Bits(9) &= N2Bits(2\cdot{}4 + 1) \\
+            &= N2Bits(4) \bitconcat \bitvector{1} \\
+            &= N2Bits(2\cdot{}2 + 0) \bitconcat \bitvector{1} \\
+            &= N2Bits(2) \bitconcat \bitvector{1} \bitconcat \bitvector{1} \\
+            &= N2Bits(2\cdot{}1 + 0) \bitconcat \bitvector{1} \bitconcat \bitvector{1} \\
+            &= N2Bits(1) \bitconcat \bitvector{0} \bitconcat \bitvector{0} \bitconcat \bitvector{1} \\
+            &= \bitvector{1} \bitconcat \bitvector{0} \bitconcat \bitvector{0} \bitconcat \bitvector{1} \\
+            &= \bitvector{1001}
+\end{align*}
+which is hopefully not terribly surprising.
 
 Having an encoding of numbers is not terribly useful unless we can
 also perform \emph{operations}, such as arithmetic, on numbers
@@ -133,39 +151,89 @@ have to talk about Boolean logic.
 \label{sec:boolean-logic}
 
 While numbers are one of the most interesting things we can encode as
-bit vectors, we will start out by interpreting bits as truth values.
+bit vectors, we will start out by looking at bits as truth values.
 \emph{Truth} as a subject of computation was investigated by the
 English mathematician George Boole (1815-1864), whose Boolean logic
 far predates the modern notions of computers and bits.
 
-\subsection{Encoding Boolean values as bit vectors}
-
-From the Boolean perspective, we view single-element bit vectors as
-encoding the values \emph{true} or \emph{false}, which we write as $T$
-and $F$.  We start out by defining \emph{encoding} and \emph{decoding}
-functions that map between bit vectors and Boolean values.
-
-\begin{definition}[Truth values as bit vectors]
-
-  A single truth value is encoded as a single-element bit vector.
-
-  \[
-    \begin{array}{rcl}
-      bool2bits(T) & = & \bitvector{1} \\
-      bool2bits(F) & = & \bitvector{0} \\
-      bits2bool(\bitvector{1}) & = & T \\
-      bits2bool(\bitvector{0}) & = & F \\
-    \end{array}
-  \]
-\end{definition}
-
 Just as we can define operators on \emph{numbers} (such as addition),
-we can define operations on \emph{truth values} (such as ``bitwise
-and'').
+we can define operations on \emph{truth values}, writing $T$ for truth
+and $F$ for falsity.  For example, \emph{logical and}, written
+$p \land q$, is true if $p$ and $q$ are both true, and otherwise
+false, while \emph{logical and}, written $p \lor q$, is true if either
+operand is true.  The \emph{exclusive-or} operation $p \lxor q$ is
+true if exactly one of $p$ and $q$ is true, and $\neg p$ is true only
+if $p$ is false.  This is shown in \cref{fig:truth-tables}.
 
-\newcommand\bitand{\&}
-\newcommand\bitor{\|}
-\newcommand\bitxor{\oplus}
+\begin{figure}
+  \centering
+
+  \begin{displaymath}
+\begin{array}{|c c||c|c|c|c|}
+p & q & p \land q & p \lor q & p \lxor q & \neg p \\
+\hline
+T & T & T & T & F & F\\
+T & F & F & T & T & F\\
+F & T & F & T & T & T\\
+F & F & F & F & F & T\\
+\end{array}
+\end{displaymath}
+  \caption{Truth table for \emph{and}, \emph{or}, \emph{exclusive-or}, and negation.}
+  \label{fig:truth-tables}
+\end{figure}
+
+
+Since a binary boolean operator can have two possible results ($T$ or
+$F$) for a given combination of operands, and there are four possible
+combinations of operands, there are $2^{4}=16$ distinct binary
+operators on booleans.  Most of these can be written in terms of other
+operators.  For example, the \emph{negated-and} operator can be defined as
+
+\begin{align}
+  nand(p,q) \defeq \neg (p \land q)
+\end{align}
+
+Interestingly, it turns out that the nand operation is universal, in
+that \emph{any} boolean function can be written using a combination of
+nand operations.  Examples:
+
+\begin{align}
+  \neg p &= nand(p,p) \\
+  p \land q &= nand(nand(p,q),nand(p,q)) \\
+  p \lor q &= nand(nand(p,p),nand(q,q))
+\end{align}
+
+\subsection{Boolean operations as bits}
+
+The truth values of Boolean logic can easily be encoded as bits - by
+treating $1$ as $T$ and $0$ as $F$, we can apply the boolean operators
+directly:
+\begin{align}
+  0 \land 1 &= 0 \\
+  0 \lor 1 &= 1 \\
+  0 \lxor 1 &= 1 \\
+  \neg 0 &= 1
+\end{align}
+
+In \cref{sec:bit} we remarked that bits can be represented using any
+physical phenomenon capable of two distinct states.  In order to be
+practical for \emph{computation}, we must also be able to easily
+implement boolean operations on pairs of bits.  As mentioned above,
+the nand operation is universal, so if we can show how to implement
+it, we can implement any boolean function.
+
+In practice, it turns out that representation of bits as high and low
+voltages makes it easy to implement logical operations with
+\emph{transistors}.  It is relatively straightforward to create a
+\emph{gate} that has two input wires and one output wire, where the
+voltage of the output wire depends on the voltages of the input---and
+these gates can be made extremely small using modern manufacturing
+techniques.  This is why electronic computers have become the most
+popular way of implementing computation.
+
+We will not delve further into how logical operations are physically
+implemented.  Instead, we will use the logical operators to build ever
+more elaborate operations on bit vectors.
 
 \section{Bit arithmetic}
 \label{sec:bit-arithmetic}
