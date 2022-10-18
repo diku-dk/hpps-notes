@@ -88,6 +88,7 @@ mathematical set we wish to encode, say the natural numbers
 $\mathbb{N}$.
 
 \subsection{Bit vectors as natural numbers}
+\label{sec:bitnats}
 
 One of the most obvious ways to interpret a bit vector is as a number
 in base 2.  For example, the bit vector $\bitvector{1001}$ represents
@@ -105,9 +106,11 @@ how a bit vector of length $w$ is interpreted as a number.  Here we do
 treat single bits as numbers, $0$ or $1$, and multiplying them with a
 \emph{weight}.
 
-\begin{equation}
+\begin{definition}[Bit vector to natural number]
+\begin{align*}
     Bits2N(\bitvector{x_{w-1}\cdots x_{0}}) \defeq \sum_{i=0}^{w} x_{i} \cdot{} 2^{i}
-\end{equation}
+\end{align*}
+\end{definition}
 
 \begin{example}
   \[
@@ -122,14 +125,16 @@ The conversion of a number to a bit vector is slightly less pleasant,
 and is defined by the following equations, which together define a
 recursive procedure.
 
+\begin{definition}[Natural number to bit vector]
   \begin{align}
     N2Bits(0) \defeq & \bitvector{0} \\
     N2Bits(1) \defeq & \bitvector{1} \\
     N2Bits(2\cdot{}x + 0) \defeq & N2Bits(x)\bitconcat\bitvector{0} \\
     N2Bits(2\cdot{}x + 1) \defeq & N2Bits(x)\bitconcat\bitvector{1}
   \end{align}
+\end{definition}
 
-By applying these equations, we can for example show that
+  \begin{example}
 \begin{align*}
   N2Bits(9) &= N2Bits(2\cdot{}4 + 1) \\
             &= N2Bits(4) \bitconcat \bitvector{1} \\
@@ -140,7 +145,7 @@ By applying these equations, we can for example show that
             &= \bitvector{1} \bitconcat \bitvector{0} \bitconcat \bitvector{0} \bitconcat \bitvector{1} \\
             &= \bitvector{1001}
 \end{align*}
-which is hopefully not terribly surprising.
+  \end{example}
 
 Having an encoding of numbers is not terribly useful unless we can
 also perform \emph{operations}, such as arithmetic, on numbers
@@ -158,9 +163,9 @@ far predates the modern notions of computers and bits.
 
 Just as we can define operators on \emph{numbers} (such as addition),
 we can define operations on \emph{truth values}, writing $T$ for truth
-and $F$ for falsity.  For example, \emph{logical and}, written
+and $F$ for falsity.  For example, \emph{logical-and}, written
 $p \land q$, is true if $p$ and $q$ are both true, and otherwise
-false, while \emph{logical and}, written $p \lor q$, is true if either
+false, while \emph{logical-and}, written $p \lor q$, is true if either
 operand is true.  The \emph{exclusive-or} operation $p \lxor q$ is
 true if exactly one of $p$ and $q$ is true, and $\neg p$ is true only
 if $p$ is false.  This is shown in \cref{fig:truth-tables}.
@@ -181,7 +186,6 @@ F & F & F & F & F & T\\
   \caption{Truth table for \emph{and}, \emph{or}, \emph{exclusive-or}, and negation.}
   \label{fig:truth-tables}
 \end{figure}
-
 
 Since a binary boolean operator can have two possible results ($T$ or
 $F$) for a given combination of operands, and there are four possible
@@ -233,10 +237,139 @@ popular way of implementing computation.
 
 We will not delve further into how logical operations are physically
 implemented.  Instead, we will use the logical operators to build ever
-more elaborate operations on bit vectors.
+more elaborate operations on bit vectors, knowing that as long as we
+can express a computation in terms of bit operations, we can
+ultimately express it in hardware.  On this humble foundation we will
+build ever more elaborate data representations.
+
+One important concession to practicality is that we will operate on
+bit vectors of fixed lengths.  While it is possible to build computers
+that operate on bit vectors of arbitrary lengths, it is much more
+efficient to build circuits that operate on a fixed number of bits at
+a time.  Usually these are powers of two---$8,16,32,64$, etc.  In the
+computer systems nomenclature, a bit vector of some directly
+hardware-supported size is called a \emph{word}.
 
 \section{Bit arithmetic}
 \label{sec:bit-arithmetic}
+
+Bit vectors have no inherent meaning.  Though they look like binary
+numbers when we write them down on paper, and we saw in
+\cref{sec:bitnats} how we can encode natural numbers as bit sequences,
+they do not innately ``know'' how to perform arithmetic operations
+such as addition.  If we wish to perform an operation on a
+mathematical object represented as a bit vector, we must precisely
+that operation in terms of bit operations.  Our goal is to specify the
+operation such that the resulting bit vector, when decoded,
+corresponds to the result we would have obtained if we operated
+directly on the mathematical objects.  For a mathematical operation
+$\odot$, we will write $\BitOdot$ for the equivalent operation on
+numbers encoded as bit vectors.
+
+\subsection{Addition}
+\label{sec:bit-addition}
+
+We wish to define an operation $\BitAdd$ such that
+\begin{equation}
+  Bits2N(N2Bits(y)\BitAdd{}N2Bits(y)) = x + y
+\end{equation}
+
+Adding binary numbers is much like adding decimal numbers.  Starting
+from the least significant (rightmost) bits, we add them elementwise,
+keeping a carry.  Example for adding $x\BitAdd{} y=s$ where
+$x=\bitvector{01011}, y=\bitvector{01001}$:
+
+\begin{center}
+\begin{tabular}{l|llrr}
+  $i$ & $x_{i}$ & $y_{i}$ & $s_{i}$ & $c_{i}$ \\\hline
+  0 & 1 & 1 & 0 & 1 \\
+  1 & 1 & 0 & 0 & 1 \\
+  2 & 0 & 0 & 1 & 0 \\
+  3 & 1 & 1 & 0 & 1 \\
+  4 & 0 & 0 & 1 & 0
+\end{tabular}
+\end{center}
+
+The result is $s=\langle{11110}$ with no carry.  In terms of bit
+operations, we can express the computation of sums and carries as
+follows (recall that $\oplus$ means exclusive-or):
+\begin{align}
+  s_{i} &= x_{i} \oplus y_{i} \oplus c_{i-1} \label{eqn:si} \\
+  c_{i} &= (x\land{}y)\lor{}((x\lor{}y)\land{}c) \label{eqn:ci}
+\end{align}
+Thus, the definition of $\BitAdd$ is as follows, when adding two
+natural numbers represented as $w$-bit vectors.
+\begin{definition}[Integer addition]
+\begin{align*}
+  \bitvector{x_{w-1}\cdots{}x_{0}} \BitAdd \bitvector{y_{w-1}\cdots{}y_{0}} \defeq
+  \bitvector{s_{w-1}\cdots{}s_{0}}
+\end{align*}
+where $s_{i},c_{i}$ are as in \cref{eqn:si,eqn:ci}.
+\end{definition}
+
+Our definition only covers the case where the two operands have the
+same number of bits.  We can always \emph{zero-extend} a $w$-bit
+vector to a $l+w$-bit vector by prepending $l$ bits, without changing
+the natural number it encodes via $Bits2N$.
+
+\subsection{Multiplication}
+\label{sec:bit-multiplication}
+
+One useful property of our representation is that we can multiply a
+number by $2$ by appending $\bitvector{0}$.  This is analogous to
+multiplying a decimal integer by $10$ by adding a zero at the
+rightmost position.  As we'll need it below, we define a shorthand for
+multiplying a $w$-bit word with a constant power of two.
+\begin{definition}[Integer multiplication by $2^{k}$]
+  \begin{align*}
+  \bitvector{x_{w-1}\cdots{}x_{0}} << k \defeq
+  \bitvector{x_{w-1-k}\cdots{}x_{0},\underbrace{0,\ldots,0}_{k}}
+  \end{align*}
+  \label{def:mulpow2}
+\end{definition}
+
+General multiplication is a bit more involved, but can be done using
+essentially the same algorithm you learned in elementary school, only
+with bits instead of digits.  More efficient algorithms exist, but are
+much more complicated.  The formula for computing the product
+$z=x\times{}y$ is
+\begin{equation}
+  z = \sum_{i=0}^{k-1} (x \times y_{i}) \times 2^{i}
+\end{equation}
+where $y_{i}$ is the $i$th bit of $y$.  Note:
+\begin{itemize}
+\item The product $x \cdot y_{i}$ is multiplying a number with a
+  single bit, meaning the result is either $x$ or $0$, which we can
+  compute by using a logical-and on every bit of $x$.
+\item The multiplication with $2^{i}$ is with a power of 2, which we
+  saw how to do in \cref{def:mulpow2}.
+\end{itemize}
+
+This lets us express the formula in terms of bit operations.
+
+\begin{definition}[Integer multiplication]
+\begin{align*}
+  \bitvector{x_{w-1}\cdots{}x_{0}} \BitMul \bitvector{y_{w-1}\cdots{}y_{0}} \defeq
+  \sum_{i=0}^{w-1} \bitvector{x_{w-1} \land y_{i},\ldots,x_{0} \land y_{i}} << i
+\end{align*}
+where summation is with $\BitAdd$.
+\end{definition}
+
+\begin{example}[$5 \times 3$]
+  \begin{align*}
+    \bitvector{0101} \BitMul \bitvector{0011} &=& \sum_{i=0}^{3} \bitvector{0 \land y_{i},1\land y_{i}, 0\land y_{i}, 1 \land y_{i}} << i \\
+                                              &=& \bitvector{0 \land 1,1\land 1, 0\land 1, 1 \land 1} << 0 \\
+                                              &&\BitAdd \bitvector{0 \land 1,1\land 1, 0\land 1, 1 \land 1} << 1 \\
+                                              &&\BitAdd \bitvector{0 \land 0,1\land 0, 0\land 0, 1 \land 0} << 2 \\
+                                              &&\BitAdd \bitvector{0 \land 0,1\land 0, 0\land 0, 1 \land 0} << 2 \\
+                                              &=&         (\bitvector{0101} << 0) \\
+    &&\BitAdd (\bitvector{0101} << 1) \\
+    && \BitAdd (\bitvector{0000} << 2) \\
+                                              && \BitAdd (\bitvector{0000} << 3) \\
+                                              &=& \bitvector{0101} \BitAdd \bitvector{1010} \BitAdd \bitvector{0000}  \BitAdd \bitvector{0000} \\
+    &=& \bitvector{1111}
+  \end{align*}
+\end{example}
 
 %%% Local Variables:
 %%% mode: latex
