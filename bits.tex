@@ -1,4 +1,4 @@
-\chapter{Data as bits}
+\chapter{Data as Bits}
 \label{chap:bits}
 
 A computer is a machine for transforming information.  Machines
@@ -10,7 +10,7 @@ will look at the notion of \emph{value encodings}---how mathematical
 objects can be represented such that they can be processed by
 machines.
 
-\section{A bit}
+\section{A Bit}
 \label{sec:bit}
 
 \begin{definition}[Bit]
@@ -47,7 +47,7 @@ electronic, and use \emph{transistors} to transform electrical signals
 representing bits, but optical representations are also common for
 long-distance communications.
 
-\subsection{Bit vectors}
+\subsection{Bit Vectors}
 
 \newcommand\bitvector[1]{\langle #1 \rangle}
 \newcommand\bitconcat{\frown}
@@ -87,7 +87,7 @@ the set of bit vectors, which we denote $\mathbb{B}^{*}$, and the
 mathematical set we wish to encode, say the natural numbers
 $\mathbb{N}$.
 
-\subsection{Bit vectors as natural numbers}
+\subsection{Bit Vectors as Natural Numbers}
 \label{sec:bitnats}
 
 One of the most obvious ways to interpret a bit vector is as a number
@@ -110,6 +110,7 @@ treat single bits as numbers, $0$ or $1$, and multiplying them with a
 \begin{align*}
     Bits2N(\bitvector{x_{w-1}\cdots x_{0}}) \defeq \sum_{i=0}^{w} x_{i} \cdot{} 2^{i}
 \end{align*}
+\label{def:bits2n}
 \end{definition}
 
 \begin{example}
@@ -152,7 +153,7 @@ also perform \emph{operations}, such as arithmetic, on numbers
 represented in the given encoding.  However, before we can do that, we
 have to talk about Boolean logic.
 
-\section{Boolean logic}
+\section{Boolean Logic}
 \label{sec:boolean-logic}
 
 While numbers are one of the most interesting things we can encode as
@@ -207,11 +208,12 @@ nand operations.  Examples:
   p \lor q &= nand(nand(p,p),nand(q,q))
 \end{align}
 
-\subsection{Boolean operations as bits}
+\subsection{Boolean Operations as Bits}
 
 The truth values of Boolean logic can easily be encoded as bits - by
 treating $1$ as $T$ and $0$ as $F$, we can apply the boolean operators
 directly:
+
 \begin{align}
   0 \land 1 &= 0 \\
   0 \lor 1 &= 1 \\
@@ -242,20 +244,37 @@ can express a computation in terms of bit operations, we can
 ultimately express it in hardware.  On this humble foundation we will
 build ever more elaborate data representations.
 
+\subsection{Words}
+\label{sec:words}
+
 One important concession to practicality is that we will operate on
 bit vectors of fixed lengths.  While it is possible to build computers
 that operate on bit vectors of arbitrary lengths, it is much more
 efficient to build circuits that operate on a fixed number of bits at
 a time.  Usually these are powers of two---$8,16,32,64$, etc.  In the
 computer systems nomenclature, a bit vector of some directly
-hardware-supported size is called a \emph{word}.
+hardware-supported fixed size is called a \emph{word}.  Generally,
+when we use the term \emph{$w$-bit word}, we mean a bit vector
+containing $w$ bits.
 
-\section{Bit arithmetic}
+A $w$-bit word can express $2^{w}$ different permutations of bits,
+meaning it can represent $2^{w}$ different values.  When deciding on a
+value representation, deciding how to best exploit this limited range
+is important.  In \cref{def:bits2n} we decided that a $w$-bit word can
+represent integers in the range $[0,2^{w}-1]$, which certainly feels
+intuitive, but we could just as well have defined a conversion
+function that encoded integers in the range
+$[k,k+2^{w}-1]$\footnote{In fact, this encoding, known as \emph{biased
+    numbers} will make in appearance in \cref{sec:floats}}.  We will
+also have to decide what happens when an operation produces a value
+that lies outside the representable range.
+
+\section{Bit Arithmetic}
 \label{sec:bit-arithmetic}
 
 Bit vectors have no inherent meaning.  Though they look like binary
 numbers when we write them down on paper, and we saw in
-\cref{sec:bitnats} how we can encode natural numbers as bit sequences,
+\cref{sec:bitnats} how we can encode natural numbers as bit vectors,
 they do not innately ``know'' how to perform arithmetic operations
 such as addition.  If we wish to perform an operation on a
 mathematical object represented as a bit vector, we must precisely
@@ -298,7 +317,7 @@ follows (recall that $\oplus$ means exclusive-or):
   c_{i} &= (x\land{}y)\lor{}((x\lor{}y)\land{}c) \label{eqn:ci}
 \end{align}
 Thus, the definition of $\BitAdd$ is as follows, when adding two
-natural numbers represented as $w$-bit vectors.
+natural numbers represented as $w$-bit word.
 \begin{definition}[Integer addition]
 \begin{align*}
   \bitvector{x_{w-1}\cdots{}x_{0}} \BitAdd \bitvector{y_{w-1}\cdots{}y_{0}} \defeq
@@ -308,9 +327,13 @@ where $s_{i},c_{i}$ are as in \cref{eqn:si,eqn:ci}.
 \end{definition}
 
 Our definition only covers the case where the two operands have the
-same number of bits.  We can always \emph{zero-extend} a $w$-bit
-vector to a $l+w$-bit vector by prepending $l$ bits, without changing
-the natural number it encodes via $Bits2N$.
+same number of bits.  We can always \emph{zero-extend} a $w$-bit word
+to a $l+w$-bit word by prepending $l$ bits, without changing the
+natural number it encodes via $Bits2N$.
+
+\subsubsection{Overflow}
+
+Our definition of $\BitAdd$ accepts and produces $w$-bit words.  What happens 
 
 \subsection{Multiplication}
 \label{sec:bit-multiplication}
@@ -361,7 +384,7 @@ where summation is with $\BitAdd$.
                                               &=& \bitvector{0 \land 1,1\land 1, 0\land 1, 1 \land 1} << 0 \\
                                               &&\BitAdd \bitvector{0 \land 1,1\land 1, 0\land 1, 1 \land 1} << 1 \\
                                               &&\BitAdd \bitvector{0 \land 0,1\land 0, 0\land 0, 1 \land 0} << 2 \\
-                                              &&\BitAdd \bitvector{0 \land 0,1\land 0, 0\land 0, 1 \land 0} << 2 \\
+                                              &&\BitAdd \bitvector{0 \land 0,1\land 0, 0\land 0, 1 \land 0} << 3 \\
                                               &=&         (\bitvector{0101} << 0) \\
     &&\BitAdd (\bitvector{0101} << 1) \\
     && \BitAdd (\bitvector{0000} << 2) \\
@@ -370,6 +393,9 @@ where summation is with $\BitAdd$.
     &=& \bitvector{1111}
   \end{align*}
 \end{example}
+
+\section{Floating-Point Numbers}
+\label{sec:floats}
 
 %%% Local Variables:
 %%% mode: latex
