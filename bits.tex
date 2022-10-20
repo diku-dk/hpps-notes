@@ -23,7 +23,8 @@ $1$ and $0$, as a reference to their interpretation as numbers, but
 this merely a question of notation.  We could equally well have used
 \emph{true}/\emph{false}, \emph{a}/\emph{b}, \emph{yes}/\emph{no}, or
 anything else that allows us to distinguish unambiguously between the
-two possible values.
+two possible values.  By convention, we say that a bit is \emph{unset}
+when $1$ and \emph{unset} when $0$.
 
 Bits are used in information theory as a unit of information.  For
 computers, bits are convenient because any physical phenomenon that
@@ -148,10 +149,12 @@ recursive procedure.
 \end{align*}
   \end{example}
 
-Having an encoding of numbers is not terribly useful unless we can
-also perform \emph{operations}, such as arithmetic, on numbers
-represented in the given encoding.  However, before we can do that, we
-have to talk about Boolean logic.
+  This representation can express only non-negative numbers.  We will
+  look at how to handle negative numbers in \cref{sec:signed-numbers}.
+  Having an encoding of numbers is not terribly useful unless we can
+  also perform \emph{operations}, such as arithmetic, on numbers
+  represented in the given encoding.  However, before we can do that,
+  we have to talk about Boolean logic.
 
 \section{Boolean Logic}
 \label{sec:boolean-logic}
@@ -285,6 +288,13 @@ directly on the mathematical objects.  For a mathematical operation
 $\odot$, we will write $\BitOdot$ for the equivalent operation on
 numbers encoded as bit vectors.
 
+The algorithms for arithmetic we will introduce are largely similar to
+those you were hopefully taught for base-10 numbers as a child.  A
+large part of learning how to perform binary arithmetic is to
+deconstruct what has long since become intuitive and look at the
+actual operations we implicitly perform when adding or multiplying
+numbers.
+
 \subsection{Addition}
 \label{sec:bit-addition}
 
@@ -313,9 +323,12 @@ The result is $s=\langle{11110}$ with no carry.  In terms of bit
 operations, we can express the computation of sums and carries as
 follows (recall that $\oplus$ means exclusive-or):
 \begin{align}
+  s_{0} &= x_{i} \oplus y_{i} \label{eqn:s0} \\
+  c_{0} &= x_{i} \land y_{i} \label{eqn:c0} \\
   s_{i} &= x_{i} \oplus y_{i} \oplus c_{i-1} \label{eqn:si} \\
-  c_{i} &= (x\land{}y)\lor{}((x\lor{}y)\land{}c) \label{eqn:ci}
+  c_{i} &= (x_{i} \land y_{i})\lor ((x_{i}\lor y_{i})\land c_{i-1}) \label{eqn:ci}
 \end{align}
+
 Thus, the definition of $\BitAdd$ is as follows, when adding two
 natural numbers represented as $w$-bit word.
 \begin{definition}[Integer addition]
@@ -323,7 +336,8 @@ natural numbers represented as $w$-bit word.
   \bitvector{x_{w-1}\cdots{}x_{0}} \BitAdd \bitvector{y_{w-1}\cdots{}y_{0}} \defeq
   \bitvector{s_{w-1}\cdots{}s_{0}}
 \end{align*}
-where $s_{i},c_{i}$ are as in \cref{eqn:si,eqn:ci}.
+where $s_{i},c_{i}$ are as in \cref{eqn:si,eqn:c0,eqn:si,eqn:ci}.
+\label{def:intadd}
 \end{definition}
 
 Our definition only covers the case where the two operands have the
@@ -333,16 +347,62 @@ natural number it encodes via $Bits2N$.
 
 \subsubsection{Overflow}
 
-Our definition of $\BitAdd$ accepts and produces $w$-bit words.  What happens 
+Our definition of $\BitAdd$ accepts and produces $w$-bit words.  What
+happens if the resulting number is larger than $2^{w}-1$ and thus
+logically requires more than $w$ bits to be represented?  Following
+\cref{def:intadd}, we see that the final carry bit $c_{w-i}$ is not
+part of the result---if this bit is $1$, then we say that the addition
+has \emph{overflowed}.
+
+\begin{definition}{Integer overflow}
+  When the result of an integer operation is so large that it does fit
+  in the designated word.
+\end{definition}
+
+With the integer representation we have used so far, the result of an
+overflow \emph{wraps around} back to zero.  This is conceptually
+similar to adding $5+5$ in decimal arithmetic and limiting the result
+to a single digit.
+
+\begin{example}[$\bitvector{11} \BitAdd \bitvector{10}$]
+  \begin{align*}
+    s_{0} &= 1 \oplus 0 &= 1 \\
+    c_{0} &= 1 \land 0 &= 0 \\
+    s_{1} &= 1 \oplus 1 \oplus 0 &= 0 \\
+    c_{1} &= (1 \land 1) \lor ((1\lor 0) \land 0) &= 1 \\
+  \end{align*}
+  This gives us the final sum
+  \begin{align*}
+    \bitvector{11} \BitAdd \bitvector{10} = \bitvector{01}
+  \end{align*}
+  and since $c_{1}$ is set, the computation has overflowed.
+\end{example}
+
+Some programming languages make the last carry bit available as an
+\emph{overflow bit} that programmers can check to see if overflow
+occurred.  In others, an error is signalled if the overflow bit is set
+after an addition.  But in many languages, such as C, overflow
+silently occurs and means the program can produce a possibly
+unexpected result when working with large numbers.
+
+Does this mean that our carefully specified encoding of natural
+numbers as a fixed quantity of bits is simply mathematically wrong,
+when even something as simple as addition can give us an unexpected
+result?  Not exactly: while no fixed-size encoding can encompass the
+infinite natural numbers, our encoding encoding models the \emph{ring
+  of natural numbers modulo $2^{w}$}.  Our definition of arithmetic is
+\emph{modular arithmetic}, which is mathematically quite well behaved.
+In particular, arithmetic has the expected algebraic properties
+(associativity, commutativity, $0$ as additive identity, etc).
 
 \subsection{Multiplication}
 \label{sec:bit-multiplication}
 
 One useful property of our representation is that we can multiply a
 number by $2$ by appending $\bitvector{0}$.  This is analogous to
-multiplying a decimal integer by $10$ by adding a zero at the
-rightmost position.  As we'll need it below, we define a shorthand for
-multiplying a $w$-bit word with a constant power of two.
+multiplying a decimal integer by $10$ by appending $0$.  As we will
+need it below, we define a shorthand for multiplying a $w$-bit word
+with a constant power of two.
 \begin{definition}[Integer multiplication by $2^{k}$]
   \begin{align*}
   \bitvector{x_{w-1}\cdots{}x_{0}} << k \defeq
@@ -350,6 +410,8 @@ multiplying a $w$-bit word with a constant power of two.
   \end{align*}
   \label{def:mulpow2}
 \end{definition}
+Note that like addition, this is susceptible to overflow, as we
+discard the original $k$ leftmost bits.
 
 General multiplication is a bit more involved, but can be done using
 essentially the same algorithm you learned in elementary school, only
@@ -393,6 +455,9 @@ where summation is with $\BitAdd$.
     &=& \bitvector{1111}
   \end{align*}
 \end{example}
+
+\section{Signed Numbers}
+\label{sec:signed-numbers}
 
 \section{Floating-Point Numbers}
 \label{sec:floats}
