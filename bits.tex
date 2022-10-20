@@ -1,14 +1,14 @@
 \chapter{Data as Bits}
 \label{chap:bits}
 
-A computer is a machine for transforming information.  Machines
-inevitably must operate on things that physically exist, so in order
-to process information in a machine, we must \emph{represent} the
-information in some physical way.  While we stop short of discussing
-precisely the physical phenomena that underlie modern computers, we
-will look at the notion of \emph{value encodings}---how mathematical
-objects can be represented such that they can be processed by
-machines.
+A computer is a machine for processing and transforming information.
+Machines inevitably must operate on things that physically exist, so
+in order to process information in a machine, we must \emph{represent}
+the information in some physical way.  While we stop short of
+discussing precisely the physical phenomena that underlie modern
+computers, we will look at the notion of \emph{value encodings}---how
+mathematical objects can be represented such that they can be
+processed by machines.
 
 \section{A Bit}
 \label{sec:bit}
@@ -109,7 +109,7 @@ treat single bits as numbers, $0$ or $1$, and multiplying them with a
 
 \begin{definition}[Bit vector to natural number]
 \begin{align*}
-    Bits2N(\bitvector{x_{w-1}\cdots x_{0}}) \defeq \sum_{i=0}^{w} x_{i} \cdot{} 2^{i}
+    Bits2N(\bitvector{x_{w-1}\cdots x_{0}}) \defeq \sum_{i=0}^{w-1} x_{i} \cdot{} 2^{i}
 \end{align*}
 \label{def:bits2n}
 \end{definition}
@@ -149,8 +149,10 @@ recursive procedure.
 \end{align*}
   \end{example}
 
-  This representation can express only non-negative numbers.  We will
-  look at how to handle negative numbers in \cref{sec:signed-numbers}.
+  This representation can express only non-negative numbers, and is
+  called \emph{unsigned} for reasons we will discuss in
+  \cref{sec:signed-numbers}, where we also treat negative numbers.
+
   Having an encoding of numbers is not terribly useful unless we can
   also perform \emph{operations}, such as arithmetic, on numbers
   represented in the given encoding.  However, before we can do that,
@@ -458,6 +460,133 @@ where summation is with $\BitAdd$.
 
 \section{Signed Numbers}
 \label{sec:signed-numbers}
+
+The number representation discussed thus far can only represent
+non-negative numbers, which in computer science jargon are called
+\emph{unsigned}.  If we want to handle negative numbers as well, we
+need a \emph{signed} representation.
+
+\subsection{Sign-magnitude notation}
+\label{sec:sign-magnitude}
+
+In normal number notation, we turn a number negative by prefixing it
+with a minus sign.  Thus, an obvious way to introduce negative numbers
+is to treat the most significant (leftmost) bit as a \emph{sign bit},
+which is set when the number is negative.  This representation is
+known as \emph{sign-magnitude}.  The conversion function is as
+follows:
+
+\begin{definition}[Bit vector to integer using sign-magnitude]
+\begin{align*}
+    SM2Int(\bitvector{x_{w-1}\cdots x_{0}}) \defeq -1x_{w-1} \times Bits2N(\bitvector{x_{w-2}\cdots x_{0}})
+\end{align*}
+\label{def:sm2int}
+\end{definition}
+
+Negating a number in sign-magnitude representation is quite simple:
+just flip the sign bit.
+
+\begin{table}
+  \centering
+  \[
+  \begin{array}{c|r||c|r}
+    x & SM2Int(x) & x & SM2Int(x) \\\hline
+    \bitvector{0000} & 0 & \bitvector{1000} & 0 \\
+    \bitvector{0001} & 1 & \bitvector{1001} & -1 \\
+    \bitvector{0010} & 2 & \bitvector{1010} & -2 \\
+    \bitvector{0011} & 3 & \bitvector{1011} & -3 \\
+    \bitvector{0100} & 4 & \bitvector{1100} & -4 \\
+    \bitvector{0101} & 5 & \bitvector{1101} & -5 \\
+    \bitvector{0110} & 6 & \bitvector{1110} & -6 \\
+    \bitvector{0111} & 7 & \bitvector{1111} & -7 \\
+  \end{array}
+  \]
+  \caption{All possible four-bit words interpreted as integers using
+    sign-magnitude representation.}
+  \label{tab:sign-mag}
+\end{table}
+
+Although simple, this representation has the downside that it contains
+two representations of zero, as seen in \cref{tab:sign-mag}.  While
+having multiple representations of the same value is not inherently
+wrong, it is slightly wasteful, and complicates the definition of
+arithmetic.  In particular, arithmetic and comparisons of
+sign-magnitude numbers is somewhat involved because we have to treat
+the sign bit specially.  For these reasons, sign-magnitude is not used
+for integers in most modern computers.
+
+\subsection{Two's complement}
+\label{sec:twos-complement}
+
+The overwhelmingly most common integer representation in modern
+computers is known as \emph{two's complement}.  It encodes integers by
+assigning each bit a weight, just like with unsigned numbers, but
+assigns the most significant bit (the \emph{sign bit}) a large
+\emph{negative} weight.
+
+\begin{definition}[Two's Complement to integer]
+\begin{align*}
+    TC2N(\bitvector{x_{w-1}\cdots x_{0}}) \defeq -x_{w-1}\cdot 2^{w-1} + \sum_{i=0}^{w-2} x_{i} \cdot{} 2^{i}
+\end{align*}
+\label{def:tc2n}
+\end{definition}
+
+\begin{table}
+  \centering
+  \[
+  \begin{array}{c|r||c|r}
+    x & TC2Int(x) & x & TC2Int(x) \\\hline
+    \bitvector{0000} & 0 & \bitvector{1000} & -8 \\
+    \bitvector{0001} & 1 & \bitvector{1001} & -7 \\
+    \bitvector{0010} & 2 & \bitvector{1010} & -6 \\
+    \bitvector{0011} & 3 & \bitvector{1011} & -5 \\
+    \bitvector{0100} & 4 & \bitvector{1100} & -4 \\
+    \bitvector{0101} & 5 & \bitvector{1101} & -3 \\
+    \bitvector{0110} & 6 & \bitvector{1110} & -2 \\
+    \bitvector{0111} & 7 & \bitvector{1111} & -1 \\
+  \end{array}
+  \]
+  \caption{All possible four-bit words interpreted as integers using
+    Two's Complement representation.}
+  \label{tab:twos-complement}
+\end{table}
+
+Using Two's Complement, all distinct bit vectors encode distinct
+integers, as demonstrated on \cref{tab:twos-complement}.  But this
+representation also has other useful properties.  One almost
+miraculous property is that we can add and multiply numbers in Two's
+Complement representation the exact same way that we add unsigned
+numbers using \cref{def:intadd}, and get the right result (ignoring
+overflow).  For non-negative numbers, this is not terribly surprising,
+as these have identical representations in unsigned and Two's
+Complement representation.  The reason is that negative numbers in
+Two's Complement maintain their relative ordering when interpreted as
+unsigned numbers, which is not the case for sign-magnitude.  It is
+likely that it is this property that has made Two's Complement the
+dominant integer representation, as it means a computer designer can
+use the same circuitry for processing signed and unsigned numbers.
+
+Negation of Two's Complement numbers is done by flipping all the bits
+and then incrementing by one:
+
+\begin{definition}[Negating a Two's Complement number]
+  \[
+    negTC(\bitvector{x_{w-1}\cdots{}x_{0}}) = \bitvector{\neg{}x_{w-1}\cdots{}\neg{}x_{0}} \BitAdd \bitvector{0\cdots{}1}
+  \]
+\end{definition}
+
+However, because the range of Two's Complement is assymetric---there
+are more negative than positive numbers---negation of the most
+negative number is an identity operation.
+
+\begin{example}[Overflow when negating]
+  \begin{align*}
+    negTC(\bitvector{1000})
+    &= \bitvector{\neg 1 \neg 0 \neg 0 \neg 0} \BitAdd \bitvector{0001} \\
+    &= \bitvector{0 1 1 1} \BitAdd \bitvector{0001} \\
+    &= \bitvector{1 0 0 0} \\
+  \end{align*}
+\end{example}
 
 \section{Floating-Point Numbers}
 \label{sec:floats}
