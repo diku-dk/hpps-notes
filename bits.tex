@@ -519,10 +519,12 @@ for integers in most modern computers.
 \label{sec:twos-complement}
 
 The overwhelmingly most common integer representation in modern
-computers is known as \emph{two's complement}.  It encodes integers by
-assigning each bit a weight, just like with unsigned numbers, but
-assigns the most significant bit (the \emph{sign bit}) a large
-\emph{negative} weight.
+computers is known as \emph{two's complement}.  In this
+representation, a negative number is encoded by the logically negated
+bit sequence of the corresponding positive number, plus one.  Another
+view is that Two's Complement represents integers by assigning each
+bit a weight, just like with unsigned numbers, but assigns the most
+significant bit (the \emph{sign bit}) a large \emph{negative} weight.
 
 \begin{definition}[Two's Complement to integer]
 \begin{align*}
@@ -551,7 +553,7 @@ assigns the most significant bit (the \emph{sign bit}) a large
   \label{tab:twos-complement}
 \end{table}
 
-Using Two's Complement, all distinct bit vectors encode distinct
+Using Two's Complement, all distinct bit vectors represent distinct
 integers, as demonstrated on \cref{tab:twos-complement}.  But this
 representation also has other useful properties.  One almost
 miraculous property is that we can add and multiply numbers in Two's
