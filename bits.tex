@@ -109,7 +109,7 @@ treat single bits as numbers, $0$ or $1$, and multiplying them with a
 
 \begin{definition}[Bit vector to natural number]
 \begin{align*}
-    Bits2N(\bitvector{x_{w-1}\cdots x_{0}}) \defeq \sum_{i=0}^{w-1} x_{i} \cdot{} 2^{i}
+    \mathrm{Bits2N}(\bitvector{x_{w-1}\cdots x_{0}}) \defeq \sum_{i=0}^{w-1} x_{i} \cdot{} 2^{i}
 \end{align*}
 \label{def:bits2n}
 \end{definition}
@@ -117,7 +117,7 @@ treat single bits as numbers, $0$ or $1$, and multiplying them with a
 \begin{example}
   \[
     \begin{array}{rcl}
-      Bits2N(\bitvector{1101}) & = & 1 \cdot 2^{0} + 0 \cdot 2^{1} + 1 \cdot 2^{2} + 1 \cdot 2^{3} \\
+      \mathrm{Bits2N}(\bitvector{1101}) & = & 1 \cdot 2^{0} + 0 \cdot 2^{1} + 1 \cdot 2^{2} + 1 \cdot 2^{3} \\
                                & = & 13
     \end{array}
   \]
@@ -129,21 +129,21 @@ recursive procedure.
 
 \begin{definition}[Natural number to bit vector]
   \begin{align}
-    N2Bits(0) \defeq & \bitvector{0} \\
-    N2Bits(1) \defeq & \bitvector{1} \\
-    N2Bits(2\cdot{}x + 0) \defeq & N2Bits(x)\bitconcat\bitvector{0} \\
-    N2Bits(2\cdot{}x + 1) \defeq & N2Bits(x)\bitconcat\bitvector{1}
+    \mathrm{N2Bits}(0) \defeq & \bitvector{0} \\
+    \mathrm{N2Bits}(1) \defeq & \bitvector{1} \\
+    \mathrm{N2Bits}(2\cdot{}x + 0) \defeq & \mathrm{N2Bits}(x)\bitconcat\bitvector{0} \\
+    \mathrm{N2Bits}(2\cdot{}x + 1) \defeq & \mathrm{N2Bits}(x)\bitconcat\bitvector{1}
   \end{align}
 \end{definition}
 
   \begin{example}
 \begin{align*}
-  N2Bits(9) &= N2Bits(2\cdot{}4 + 1) \\
-            &= N2Bits(4) \bitconcat \bitvector{1} \\
-            &= N2Bits(2\cdot{}2 + 0) \bitconcat \bitvector{1} \\
-            &= N2Bits(2) \bitconcat \bitvector{1} \bitconcat \bitvector{1} \\
-            &= N2Bits(2\cdot{}1 + 0) \bitconcat \bitvector{1} \bitconcat \bitvector{1} \\
-            &= N2Bits(1) \bitconcat \bitvector{0} \bitconcat \bitvector{0} \bitconcat \bitvector{1} \\
+  \mathrm{N2Bits}(9) &= \mathrm{N2Bits}(2\cdot{}4 + 1) \\
+            &= \mathrm{N2Bits}(4) \bitconcat \bitvector{1} \\
+            &= \mathrm{N2Bits}(2\cdot{}2 + 0) \bitconcat \bitvector{1} \\
+            &= \mathrm{N2Bits}(2) \bitconcat \bitvector{1} \bitconcat \bitvector{1} \\
+            &= \mathrm{N2Bits}(2\cdot{}1 + 0) \bitconcat \bitvector{1} \bitconcat \bitvector{1} \\
+            &= \mathrm{N2Bits}(1) \bitconcat \bitvector{0} \bitconcat \bitvector{0} \bitconcat \bitvector{1} \\
             &= \bitvector{1} \bitconcat \bitvector{0} \bitconcat \bitvector{0} \bitconcat \bitvector{1} \\
             &= \bitvector{1001}
 \end{align*}
@@ -200,7 +200,7 @@ operators on booleans.  Most of these can be written in terms of other
 operators.  For example, the \emph{negated-and} operator can be defined as
 
 \begin{align}
-  nand(p,q) \defeq \neg (p \land q)
+  mathrm{nand}(p,q) \defeq \neg (p \land q)
 \end{align}
 
 Interestingly, it turns out that the nand operation is universal, in
@@ -208,9 +208,9 @@ that \emph{any} boolean function can be written using a combination of
 nand operations.  Examples:
 
 \begin{align}
-  \neg p &= nand(p,p) \\
-  p \land q &= nand(nand(p,q),nand(p,q)) \\
-  p \lor q &= nand(nand(p,p),nand(q,q))
+  \neg p &= \mathrm{nand}(p,p) \\
+  p \land q &= \mathrm{nand}(\mathrm{nand}(p,q),\mathrm{nand}(p,q)) \\
+  p \lor q &= \mathrm{nand}(\mathrm{nand}(p,p),\mathrm{nand}(q,q))
 \end{align}
 
 \subsection{Boolean Operations as Bits}
@@ -302,7 +302,7 @@ numbers.
 
 We wish to define an operation $\BitAdd$ such that
 \begin{equation}
-  Bits2N(N2Bits(y)\BitAdd{}N2Bits(y)) = x + y
+  \mathrm{Bits2N}(\mathrm{N2Bits}(y)\BitAdd{}\mathrm{N2Bits}(y)) = x + y
 \end{equation}
 
 Adding binary numbers is much like adding decimal numbers.  Starting
@@ -345,7 +345,7 @@ where $s_{i},c_{i}$ are as in \cref{eqn:si,eqn:c0,eqn:si,eqn:ci}.
 Our definition only covers the case where the two operands have the
 same number of bits.  We can always \emph{zero-extend} a $w$-bit word
 to a $l+w$-bit word by prepending $l$ bits, without changing the
-natural number it encodes via $Bits2N$.
+natural number it encodes via $\mathrm{Bits2N}$.
 
 \subsubsection{Overflow}
 
@@ -466,7 +466,7 @@ non-negative numbers, which in computer science jargon are called
 \emph{unsigned}.  If we want to handle negative numbers as well, we
 need a \emph{signed} representation.
 
-\subsection{Sign-magnitude notation}
+\subsection{Sign-magnitude}
 \label{sec:sign-magnitude}
 
 In normal number notation, we turn a number negative by prefixing it
@@ -478,7 +478,7 @@ follows:
 
 \begin{definition}[Bit vector to integer using sign-magnitude]
 \begin{align*}
-    SM2Int(\bitvector{x_{w-1}\cdots x_{0}}) \defeq -1x_{w-1} \times Bits2N(\bitvector{x_{w-2}\cdots x_{0}})
+  \mathrm{SM2Int}(\bitvector{x_{w-1}\cdots x_{0}}) \defeq -1x_{w-1} \times \mathrm{Bits2N}(\bitvector{x_{w-2}\cdots x_{0}})
 \end{align*}
 \label{def:sm2int}
 \end{definition}
@@ -490,7 +490,7 @@ just flip the sign bit.
   \centering
   \[
   \begin{array}{c|r||c|r}
-    x & SM2Int(x) & x & SM2Int(x) \\\hline
+    x & \mathrm{SM2Int}(x) & x & \mathrm{SM2Int}(x) \\\hline
     \bitvector{0000} & 0 & \bitvector{1000} & 0 \\
     \bitvector{0001} & 1 & \bitvector{1001} & -1 \\
     \bitvector{0010} & 2 & \bitvector{1010} & -2 \\
@@ -526,7 +526,7 @@ assigns the most significant bit (the \emph{sign bit}) a large
 
 \begin{definition}[Two's Complement to integer]
 \begin{align*}
-    TC2N(\bitvector{x_{w-1}\cdots x_{0}}) \defeq -x_{w-1}\cdot 2^{w-1} + \sum_{i=0}^{w-2} x_{i} \cdot{} 2^{i}
+  \mathrm{TC2N}(\bitvector{x_{w-1}\cdots x_{0}}) \defeq -x_{w-1}\cdot 2^{w-1} + \sum_{i=0}^{w-2} x_{i} \cdot{} 2^{i}
 \end{align*}
 \label{def:tc2n}
 \end{definition}
@@ -535,7 +535,7 @@ assigns the most significant bit (the \emph{sign bit}) a large
   \centering
   \[
   \begin{array}{c|r||c|r}
-    x & TC2Int(x) & x & TC2Int(x) \\\hline
+    x & \mathrm{TC2Int}(x) & x & \mathrm{TC2Int}(x) \\\hline
     \bitvector{0000} & 0 & \bitvector{1000} & -8 \\
     \bitvector{0001} & 1 & \bitvector{1001} & -7 \\
     \bitvector{0010} & 2 & \bitvector{1010} & -6 \\
@@ -571,20 +571,60 @@ and then incrementing by one:
 
 \begin{definition}[Negating a Two's Complement number]
   \[
-    negTC(\bitvector{x_{w-1}\cdots{}x_{0}}) = \bitvector{\neg{}x_{w-1}\cdots{}\neg{}x_{0}} \BitAdd \bitvector{0\cdots{}1}
+    \mathrm{negTC}(\bitvector{x_{w-1}\cdots{}x_{0}}) \defeq \bitvector{\neg{}x_{w-1}\cdots{}\neg{}x_{0}} \BitAdd \bitvector{0\cdots{}1}
   \]
 \end{definition}
 
-However, because the range of Two's Complement is assymetric---there
+However, because the range of Two's Complement is asymmetric---there
 are more negative than positive numbers---negation of the most
 negative number is an identity operation.
 
 \begin{example}[Overflow when negating]
   \begin{align*}
-    negTC(\bitvector{1000})
+    \mathrm{negTC}(\bitvector{1000})
     &= \bitvector{\neg 1 \neg 0 \neg 0 \neg 0} \BitAdd \bitvector{0001} \\
     &= \bitvector{0 1 1 1} \BitAdd \bitvector{0001} \\
     &= \bitvector{1 0 0 0} \\
+  \end{align*}
+\end{example}
+
+Nevertheless, the definition of negation is sufficient for us to
+define subtraction of numbers in Two's Complement:
+
+\begin{definition}[Integer subtraction in Two's Complement]
+  \begin{align*}
+    x \BitSub y \defeq x \BitAdd \mathrm{negTC}(y)
+  \end{align*}
+  \label{def:intsub}
+\end{definition}
+
+\subsection{Sign Extension}
+\label{sec:sign-extension}
+
+In \cref{sec:bit-addition} we saw that a $w$-bit unsigned number can
+be extended to a $w+k$-bit number by prepending zeroes.  Such
+\emph{zero extension} can however change the numeric interpretation of
+a Two's Complement number.
+
+\begin{example}[Zero extension may change value]
+  \begin{align*}
+    \mathrm{TC2Int}(\bitvector{1100}) &= -4 \\
+    \mathrm{TC2Int}(\bitvector{00001100}) &= 12 \\
+    \mathrm{TC2Int}(\bitvector{0100}) &= 4 \\
+    \mathrm{TC2Int}(\bitvector{00000100}) &= 4
+  \end{align*}
+\end{example}
+
+To extend a $w$-bit word to a $w-k$-bit word while preserving its
+Two's Complement numeric value, we perform \emph{sign extension} where
+we prepend copies of the sign bit.
+
+\begin{example}[Sign extension preserves value]
+  \begin{align*}
+    \mathrm{TC2Int}(\bitvector{1100}) &= -4 \\
+    \mathrm{TC2Int}(\bitvector{11111100}) &= -4 \\
+    \mathrm{TC2Int}(\bitvector{0100}) &= 4 \\
+    \mathrm{TC2Int}(\bitvector{00000100}) &= 4 \\
   \end{align*}
 \end{example}
 
