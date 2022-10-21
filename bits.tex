@@ -64,11 +64,11 @@ convention, but done to resemble the ordering of digits in
 mathematical notation.
 
 \begin{definition}[Concatenation of bit vectors]
-  We denote concatenation with the $\bitconcat$ operator and define it
-  the obvious way, as follows:
+  Two bit vectors juxtaposed is interpreted as concatenation and
+  defined as follows:
   \[
-    \bitvector{x_{n-1}\ldots{}x_{0}} \bitconcat \bitvector{y_{m-1}\ldots{}y_{0}} =
-    \bitvector{x_{n-1}\ldots{}x_{0}~y_{m-1}\ldots{}y_{0}}
+    \bitvector{x_{n-1}\ldots{}x_{0}} \bitvector{y_{m-1}\ldots{}y_{0}}
+    = \bitvector{x_{n-1}\ldots{}x_{0}~y_{m-1}\ldots{}y_{0}}
   \]
 \end{definition}
 
@@ -80,8 +80,8 @@ and ceremonious, but eventually we will look at more complicated
 encodings.  The goal is to establish a firm distinction between the
 \emph{encoding} of some mathematical object (say, a number) as a bit
 vector, and the mathematical object itself.  Such an encoding is
-defined by specifying a pair of \emph{conversion} functions between
-the set of bit vectors, which we denote $\mathbb{B}^{*}$, and the
+defined by specifying \emph{conversion functions} between the set of
+$w$-bit vectors, which we denote $\mathbb{B}^{w}$, and the
 mathematical set we wish to encode, say the natural numbers
 $\mathbb{N}$.
 
@@ -121,29 +121,33 @@ treat single bits as numbers, $0$ or $1$, and multiplying them with a
 \end{example}
 
 The conversion of a number to a bit vector is slightly less pleasant,
-and is defined by the following equations, which together define a
-recursive procedure.
+and is defined by the following recursive procedure.
 
-\begin{definition}[Natural number to bit vector]
+\begin{definition}[Natural number to $w$-bit vector]
   \begin{align}
-    \mathrm{N2Bits}(0) \defeq & \bitvector{0} \\
-    \mathrm{N2Bits}(1) \defeq & \bitvector{1} \\
-    \mathrm{N2Bits}(2\cdot{}x + 0) \defeq & \mathrm{N2Bits}(x)\bitconcat\bitvector{0} \\
-    \mathrm{N2Bits}(2\cdot{}x + 1) \defeq & \mathrm{N2Bits}(x)\bitconcat\bitvector{1}
+    \mathrm{N2Bits}_{1}(0) \defeq & \bitvector{0} \\
+    \mathrm{N2Bits}_{1}(1) \defeq & \bitvector{1} \\
+    \mathrm{N2Bits}_{w}(x) \defeq &
+                                    \begin{cases}
+                                      \bitvector{\mathrm{N2Bits}_{w-1}(\lfloor\frac{x}{2}\rfloor)}\bitvector{0} & \text{$x$ is even} \\
+                                      \bitvector{\mathrm{N2Bits}_{w-1}(\lfloor\frac{x}{2}\rfloor)}\bitvector{1} & \text{$x$ is odd}
+                                    \end{cases}
   \end{align}
 \end{definition}
 
+Note that $N2Bits_{w}(x)$ always produces a bit vector with $w$ bits,
+no matter the magnitude of $x$.  We will return to this in
+\cref{sec:words}.
+
   \begin{example}
-\begin{align*}
-  \mathrm{N2Bits}(9) &= \mathrm{N2Bits}(2\cdot{}4 + 1) \\
-            &= \mathrm{N2Bits}(4) \bitconcat \bitvector{1} \\
-            &= \mathrm{N2Bits}(2\cdot{}2 + 0) \bitconcat \bitvector{1} \\
-            &= \mathrm{N2Bits}(2) \bitconcat \bitvector{1} \bitconcat \bitvector{1} \\
-            &= \mathrm{N2Bits}(2\cdot{}1 + 0) \bitconcat \bitvector{1} \bitconcat \bitvector{1} \\
-            &= \mathrm{N2Bits}(1) \bitconcat \bitvector{0} \bitconcat \bitvector{0} \bitconcat \bitvector{1} \\
-            &= \bitvector{1} \bitconcat \bitvector{0} \bitconcat \bitvector{0} \bitconcat \bitvector{1} \\
+\begin{align}
+  \mathrm{N2Bits}_{4}(9) &= \mathrm{N2Bits}_{4}(2\cdot{}4 + 1) \\
+            &= \mathrm{N2Bits}_{3}(4) \bitvector{1} \\
+            &= \mathrm{N2Bits}_{2}(2) \bitvector{1} \bitvector{1} \\
+            &= \mathrm{N2Bits}_{1}(1) \bitvector{0} \bitvector{0} \bitvector{1} \\
+            &= \bitvector{1} \bitvector{0} \bitvector{0} \bitvector{1} \\
             &= \bitvector{1001}
-\end{align*}
+\end{align}
   \end{example}
 
   This representation can express only non-negative numbers, and is
@@ -271,6 +275,24 @@ $[k,k+2^{w}-1]$\footnote{In fact, this encoding, known as \emph{biased
 also have to decide what happens when an operation produces a value
 that lies outside the representable range.
 
+As a notational convenience, the bitwise operations are extended to
+operate elementwise on words as follows:
+
+\begin{definition}[Bitwise operations on words]
+  \begin{align*}
+    \bitvector{x_{w-1}\cdots x_{0}} &\land \bitvector{y_{w-1}\cdots y_{0}} &&\defeq
+    \bitvector{x_{w-1} \land y_{w-1}\cdots x_{0} \land y_{0}} \\
+    \bitvector{x_{w-1}\cdots x_{0}} &\lor \bitvector{y_{w-1}\cdots y_{0}} &&\defeq
+    \bitvector{x_{w-1} \lor y_{w-1} \cdots x_{0} \lor y_{0}} \\
+    \bitvector{x_{w-1}\cdots x_{0}} &\lxor \bitvector{y_{w-1}\cdots y_{0}} &&\defeq
+    \bitvector{x_{w-1} \lxor y_{w-1}\cdots x_{0} \lxor y_{0}} \\
+    &\neg \bitvector{x_{w-1}\cdots x_{0}} &&\defeq \bitvector{\neg x_{w-1}\cdots \neg x_{0}}
+  \end{align*}
+  \label{def:wordbitwise}
+\end{definition}
+
+This is also the form they take in programming languages such as C.
+
 \section{Bit Arithmetic}
 \label{sec:bit-arithmetic}
 
@@ -299,7 +321,7 @@ numbers.
 
 We wish to define an operation $\BitAdd$ such that
 \begin{equation}
-  \mathrm{Bits2N}(\mathrm{N2Bits}(y)\BitAdd{}\mathrm{N2Bits}(y)) = x + y
+  \mathrm{Bits2N}(\mathrm{N2Bits}_{w}(y)\BitAdd{}\mathrm{N2Bits}_{w}(y)) = x + y
 \end{equation}
 
 Adding binary numbers is much like adding decimal numbers.  Starting
@@ -342,7 +364,8 @@ where $s_{i},c_{i}$ are as in \cref{eqn:si,eqn:c0,eqn:si,eqn:ci}.
 Our definition only covers the case where the two operands have the
 same number of bits.  We can always \emph{zero-extend} a $w$-bit word
 to a $l+w$-bit word by prepending $l$ bits, without changing the
-natural number it encodes via $\mathrm{Bits2N}$.
+natural number it encodes via $\mathrm{Bits2N}$.  On the other hand,
+\emph{truncation} by removing bits can change the encoded value.
 
 \subsubsection{Overflow}
 
@@ -364,16 +387,16 @@ similar to adding $5+5$ in decimal arithmetic and limiting the result
 to a single digit.
 
 \begin{example}[$\bitvector{11} \BitAdd \bitvector{10}$]
-  \begin{align*}
+  \begin{align}
     s_{0} &= 1 \oplus 0 &= 1 \\
     c_{0} &= 1 \land 0 &= 0 \\
     s_{1} &= 1 \oplus 1 \oplus 0 &= 0 \\
     c_{1} &= (1 \land 1) \lor ((1\lor 0) \land 0) &= 1 \\
-  \end{align*}
+  \end{align}
   This gives us the final sum
-  \begin{align*}
+  \begin{align}
     \bitvector{11} \BitAdd \bitvector{10} = \bitvector{01}
-  \end{align*}
+  \end{align}
   and since $c_{1}$ is set, the computation has overflowed.
 \end{example}
 
@@ -394,29 +417,63 @@ infinite natural numbers, our encoding models the \emph{ring
 In particular, arithmetic has the expected algebraic properties
 (associativity, commutativity, $0$ as additive identity, etc).
 
-\subsection{Multiplication}
-\label{sec:bit-multiplication}
+\subsection{Bit Shifting}
+\label{sec:bitshift}
 
-One useful property of our representation is that we can multiply a
-number by $2$ by appending $\bitvector{0}$.  This is analogous to
-multiplying a decimal integer by $10$ by appending $0$.  As we will
-need it below, we define a shorthand for multiplying a $w$-bit word
-with a constant power of two.
-\begin{definition}[Integer multiplication by $2^{k}$]
+Given a $w$-bit word, we can \emph{shift} the bits of the word left by
+$k$ positions, inserting $0$ bits in the newly vacated spots.  Put
+another way, we discard the leftmost $k$ bits and append $k$ zeroes to
+the end.
+
+\begin{definition}[Logical left-shift by $k$ bits]
   \begin{align*}
-  \bitvector{x_{w-1}\cdots{}x_{0}} << k \defeq
-  \bitvector{x_{w-1-k}\cdots{}x_{0},\underbrace{0,\ldots,0}_{k}}
+  \bitvector{x_{w-1}\cdots{}x_{0}} \BitSll k \defeq
+  \bitvector{x_{w-1-k}\cdots{}x_{0} \underbrace{0\cdots 0}_{k}}
   \end{align*}
-  \label{def:mulpow2}
+  \label{def:bits-leftshift}
 \end{definition}
+
+Left-shifting by $k$ bits is equivalent to multiplying by $2^{k}$ when
+using the encoding of natural numbers from \cref{def:bits2n}.  This is
+analogous to multiplying a decimal integer by $10$ by appending $0$.
 Note that like addition, this is susceptible to overflow, as we
 discard the original $k$ leftmost bits.
 
-General multiplication is a bit more involved, but can be done using
-essentially the same algorithm you learned in elementary school, only
-with bits instead of digits.  More efficient algorithms exist, but are
-much more complicated.  The formula for computing the product
-$z=x\times{}y$ is
+\begin{example}[Left-shifting bit vectors with $w=4$]
+  \begin{align}
+    \mathrm{N2Bits}_{4}(3) \BitSll 2 &&= \bitvector{0011} \BitSll 2 &&= \bitvector{1100} &&= \mathrm{N2Bits}_{4}(12) \\
+    \mathrm{N2Bits}_{4}(9) \BitSll 2 &&= \bitvector{1001} \BitSll 2 &&= \bitvector{0100} &&= \mathrm{N2Bits}_{4}(8)
+  \end{align}
+\end{example}
+
+An obvious dual operation is \emph{right-shifting}, where we drop the
+$k$ leftmost bits and prepend $k$ zero bits.
+
+\begin{definition}[Logical right-shift by $k$ bits]
+  \begin{align*}
+    \bitvector{x_{w-1}\cdots{}x_{0}} \BitSrl k \defeq
+    \bitvector{\underbrace{0 \cdots 0}_{k} x_{w-1}\cdots{}x_{k}}
+  \end{align*}
+  \label{def:bits-rightshift-logical}
+\end{definition}
+
+Interpreted as an unsigned number, right-shifting a bit vector by $k$
+is equivalent to dividing by $2^{k}$ and then rounding towards zero.
+
+Closely related to shifting is \emph{rotation}, where bits are not
+discarded but merely moved to the other end of the word.  We will not
+use bit rotation in these notes, but it is often efficiently supported
+by computers and has some niche uses.
+
+\subsection{Multiplication}
+\label{sec:bit-multiplication}
+
+In the \cref{sec:bitshift} we saw how left-shifting can be used to
+multiply by powers of two.  General multiplication is a bit more
+involved, but can be done using essentially the same algorithm you
+learned in elementary school, only with bits instead of digits.  More
+efficient algorithms exist, but are much more complicated.  The
+formula for computing the product $z=x\times{}y$ is
 \begin{equation}
   z = \sum_{i=0}^{k-1} (x \times y_{i}) \times 2^{i}
 \end{equation}
@@ -425,8 +482,8 @@ where $y_{i}$ is the $i$th bit of $y$.  Note:
 \item The product $x \cdot y_{i}$ is multiplying a number with a
   single bit, meaning the result is either $x$ or $0$, which we can
   compute by using a logical-and on every bit of $x$.
-\item The multiplication with $2^{i}$ is with a power of 2, which we
-  saw how to do in \cref{def:mulpow2}.
+\item The multiplication with $2^{i}$ is with a power of 2, which can
+  be done as in \cref{def:bits-leftshift}.
 \end{itemize}
 
 This lets us express the formula in terms of bit operations.
@@ -440,19 +497,19 @@ where summation is with $\BitAdd$.
 \end{definition}
 
 \begin{example}[$5 \times 3$]
-  \begin{align*}
+  \begin{align}
     \bitvector{0101} \BitMul \bitvector{0011} &=& \sum_{i=0}^{3} \bitvector{0 \land y_{i},1\land y_{i}, 0\land y_{i}, 1 \land y_{i}} << i \\
-                                              &=& \bitvector{0 \land 1,1\land 1, 0\land 1, 1 \land 1} << 0 \\
-                                              &&\BitAdd \bitvector{0 \land 1,1\land 1, 0\land 1, 1 \land 1} << 1 \\
-                                              &&\BitAdd \bitvector{0 \land 0,1\land 0, 0\land 0, 1 \land 0} << 2 \\
+                                              &=& \bitvector{0 \land 1,1\land 1, 0\land 1, 1 \land 1} << 0 \\\nonumber
+                                              &&\BitAdd \bitvector{0 \land 1,1\land 1, 0\land 1, 1 \land 1} << 1 \\\nonumber
+                                              &&\BitAdd \bitvector{0 \land 0,1\land 0, 0\land 0, 1 \land 0} << 2 \\\nonumber
                                               &&\BitAdd \bitvector{0 \land 0,1\land 0, 0\land 0, 1 \land 0} << 3 \\
-                                              &=&         (\bitvector{0101} << 0) \\
-    &&\BitAdd (\bitvector{0101} << 1) \\
-    && \BitAdd (\bitvector{0000} << 2) \\
+                                              &=&         (\bitvector{0101} << 0) \\\nonumber
+                                              &&\BitAdd (\bitvector{0101} << 1) \\\nonumber
+                                              && \BitAdd (\bitvector{0000} << 2) \\\nonumber
                                               && \BitAdd (\bitvector{0000} << 3) \\
                                               &=& \bitvector{0101} \BitAdd \bitvector{1010} \BitAdd \bitvector{0000}  \BitAdd \bitvector{0000} \\
     &=& \bitvector{1111}
-  \end{align*}
+  \end{align}
 \end{example}
 
 \section{Signed Numbers}
@@ -516,18 +573,36 @@ for integers in most modern computers.
 \label{sec:twos-complement}
 
 The overwhelmingly most common integer representation in modern
-computers is known as \emph{two's complement}.  In this
-representation, a negative number is encoded by the logically negated
-bit sequence of the corresponding positive number, plus one.  Another
-view is that Two's Complement represents integers by assigning each
-bit a weight, just like with unsigned numbers, but assigns the most
-significant bit (the \emph{sign bit}) a large \emph{negative} weight.
+computers is \emph{two's complement}.  In this representation, a
+negative number is encoded by the logically negated bit sequence of
+the corresponding positive number, plus one.  This lets us define an
+encoding function.
 
-\begin{definition}[Two's Complement to integer]
+\begin{definition}[Integer to Two's Complement]
 \begin{align*}
-  \mathrm{TC2N}(\bitvector{x_{w-1}\cdots x_{0}}) \defeq -x_{w-1}\cdot 2^{w-1} + \sum_{i=0}^{w-2} x_{i} \cdot{} 2^{i}
+  \mathrm{Z2TC}_{w}(x) =
+  \begin{cases}
+    \mathrm{N2Bits}_{w}(x) & x \geq 0 \\
+    \neg \mathrm{N2Bits}_{w}(|x|) \BitAdd \mathrm{N2Bits}_{w}(1) & x < 0
+  \end{cases}
 \end{align*}
-\label{def:tc2n}
+\label{def:z2tc}
+\end{definition}
+
+Note that we are using word negation (\cref{def:wordbitwise}) in the
+above formula.
+
+An equivalent view of Two's Complement is that represents integers by
+assigning each bit a weight, just like with unsigned numbers, but
+assigns the most significant bit (the \emph{sign bit}) a large
+\emph{negative} weight.  This is the intuition we use in our decoding
+function.
+
+\begin{definition}[Two's Complement to Integer]
+\begin{align*}
+  \mathrm{TC2Z}(\bitvector{x_{w-1}\cdots x_{0}}) \defeq -x_{w-1}\cdot 2^{w-1} + \sum_{i=0}^{w-2} x_{i} \cdot{} 2^{i}
+\end{align*}
+\label{def:tc2Z}
 \end{definition}
 
 \begin{table}
@@ -565,8 +640,10 @@ likely that it is this property that has made Two's Complement the
 dominant integer representation, as it means a computer designer can
 use the same circuitry for processing signed and unsigned numbers.
 
+\subsubsection{Arithmetic negation}
+
 Negation of Two's Complement numbers is done by flipping all the bits
-and then incrementing by one:
+(a \emph{logical negation}) and then incrementing by one:
 
 \begin{definition}[Negating a Two's Complement number]
   \[
@@ -579,12 +656,12 @@ are more negative than positive numbers---negation of the most
 negative number is an identity operation.
 
 \begin{example}[Overflow when negating]
-  \begin{align*}
+  \begin{align}
     \mathrm{negTC}(\bitvector{1000})
     &= \bitvector{\neg 1 \neg 0 \neg 0 \neg 0} \BitAdd \bitvector{0001} \\
     &= \bitvector{0 1 1 1} \BitAdd \bitvector{0001} \\
     &= \bitvector{1 0 0 0} \\
-  \end{align*}
+  \end{align}
 \end{example}
 
 Nevertheless, the definition of negation is sufficient for us to
@@ -597,21 +674,71 @@ define subtraction of numbers in Two's Complement:
   \label{def:intsub}
 \end{definition}
 
+\subsubsection{Arithmetic right shift}
+
+In \cref{sec:bitshift} we saw how shifting by $k$ corresponds to
+multiplication and division by $2^{k}$.  But while left-shifting works
+equivalently for unsigned and Two's Complement, right shifting a
+negative number tends not to produce the arithmetically right result.
+
+\begin{example}{Logically right-shifting negative numbers}
+  \begin{align}
+    \mathrm{Z2TC}(4) \BitSrl 1 &&= \bitvector{0100} \BitSrl 1 &&= \bitvector{0010} &&= \mathrm{Z2TC}(2) \\
+    \mathrm{Z2TC}(-4) \BitSrl 1 &&= \bitvector{1100} \BitSrl 1 &&= \bitvector{0110} &&= \mathrm{Z2TC}(6)
+  \end{align}
+\end{example}
+
+We can conser an unsigned number as consisting of an arbitrary number
+of $0$ bits to the left of its most significant bit, in the same
+manner we can write decimal numbers with as many leading zeroes as we
+desire.  When we right-shift, it is these zeroes that are inserted.
+Following this analogy, a negative Two's Complement number could be
+viewed as having an arbitrary number of $1$ bits to the left of
+it---or more generally, copies of the sign bit.  When we right-shift,
+it is \emph{these} that should be inserted.
+
+To address this issue, we define a new kind of right-shift where we do
+not prepend zeroes, but instead copies of the sign bit.  This is
+called an \emph{arithmetic right shift}.
+
+\begin{definition}[Arithmetic right-shift by $k$ bits]
+  \begin{align*}
+    \bitvector{x_{w-1}\cdots{}x_{0}} \BitSra k \defeq
+    \bitvector{\underbrace{x_{w-1} \cdots x_{w-1}}_{k} x_{w-1}\cdots{}x_{k}}
+  \end{align*}
+  \label{def:bits-rightshift-arithmetic}
+\end{definition}
+
+\begin{example}{Arithmetically right-shifting negative numbers}
+  \begin{align}
+    \mathrm{Z2TC}(4) \BitSra 1 &&= \bitvector{0100} \BitSra 1 &&= \bitvector{0010} &&= \mathrm{Z2TC}(2) \\
+    \mathrm{Z2TC}(-4) \BitSra 1 &&= \bitvector{1100} \BitSra 1 &&= \bitvector{1110} &&= \mathrm{Z2TC}(-2)
+  \end{align}
+\end{example}
+
+There is no need to define an arithmetic \emph{left} shift, as
+left-shifting already behaves as desired.  In programming languages
+that distinguish between signed and unsigned numbers in their type
+system, such as C, right-shifting a signed number performs an
+arithmetic shift, and right-shifting an unsigned number performs a
+logical shift.
+
 \subsection{Sign Extension}
 \label{sec:sign-extension}
 
 In \cref{sec:bit-addition} we saw that a $w$-bit unsigned number can
 be extended to a $w+k$-bit number by prepending zeroes.  Such
 \emph{zero extension} can however change the numeric interpretation of
-a Two's Complement number.
+a Two's Complement number, for reasons similar to the troubles we had
+with right-shifting.
 
 \begin{example}[Zero extension may change value]
-  \begin{align*}
+  \begin{align}
     \mathrm{TC2Int}(\bitvector{1100}) &= -4 \\
     \mathrm{TC2Int}(\bitvector{00001100}) &= 12 \\
     \mathrm{TC2Int}(\bitvector{0100}) &= 4 \\
     \mathrm{TC2Int}(\bitvector{00000100}) &= 4
-  \end{align*}
+  \end{align}
 \end{example}
 
 To extend a $w$-bit word to a $w-k$-bit word while preserving its
@@ -619,16 +746,18 @@ Two's Complement numeric value, we perform \emph{sign extension} where
 we prepend copies of the sign bit.
 
 \begin{example}[Sign extension preserves value]
-  \begin{align*}
+  \begin{align}
     \mathrm{TC2Int}(\bitvector{1100}) &= -4 \\
     \mathrm{TC2Int}(\bitvector{11111100}) &= -4 \\
     \mathrm{TC2Int}(\bitvector{0100}) &= 4 \\
-    \mathrm{TC2Int}(\bitvector{00000100}) &= 4 \\
-  \end{align*}
+    \mathrm{TC2Int}(\bitvector{00000100}) &= 4
+  \end{align}
 \end{example}
 
 \section{Floating-Point Numbers}
 \label{sec:floats}
+
+\cite{muller2018handbook}
 
 %%% Local Variables:
 %%% mode: latex
