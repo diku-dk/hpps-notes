@@ -757,7 +757,130 @@ we prepend copies of the sign bit.
 \section{Floating-Point Numbers}
 \label{sec:floats}
 
-\cite{muller2018handbook}
+Integers are all well and good, but we often need to solve problems
+that require the use of fractions---that is, we need a machine
+representation of some kind of approximation of rational or real
+numbers.  In this section we will look at the various solutions one
+can come up with to this problem, but ultimately we will focus in
+detail on \emph{floating-point} numbers, which are the most common
+implementation of fractional numbers in modern computers.  This is an
+\emph{enormous} topic, and many devote their entire careers to
+studying number representations.  The following treatment is
+relatively superficial, but the particularly interested student can
+continue their studies by reading the \emph{Handbook of Floating-Point
+  Arithmetic}~\cite{muller2018handbook} or taking courses on numerical
+analysis.
+
+Fractional numbers are inherently more difficult to implement on
+computers because of their density.  Between the numbers $x$ and $y$,
+there are $|x-y|$ integers.  Thus, when we define a fixed-size integer
+representation, there will be a smallest and largest number, but there
+will be no gap in the span.  In contrast, between $x$ and $y$ there is
+an \emph{infinite} number of rational numbers (assuming $x\neq y$).
+With a $w$-bit fixed-size representation we can at most represent
+$2^{w}$ distinct values, so any nonempty interval of rational numbers
+will necessarily have numbers we cannot represent using a fixed-size
+encoding.  Arbitrary-sized number representations can be defined that
+can represent any computable real numbers using a variable number fob
+bits, but these are implemented in software rather than in hardware
+and are \emph{much} slower than fixed-size representations.
+
+One obvious representation is to represent fractions as pairs of
+integers.  For example, the fraction
+\[
+  \frac{1}{3}
+\]
+can be straightforwardly represented as the pair $(1,3)$.  Using
+$w$-bit integers, such a pair could be represent as a $2w$ bit vector.
+The main problem with this representation is that a given number has
+many possible encodings---e.g. $(1,3)$ and $(2,6)$ both represent the
+same fraction.  Fractions can be reduced using algorithms that have
+been known for literally thousands of years, but these are
+computationally expensive---certainly not something we want a computer
+to do as part of routine arithmetic.  Another consequence of this
+redundancy is that we also waste encoding space.  As much as possible,
+we desire a representation where distinct bit patterns encode distinct
+numbers.
+
+\subsection{Fixed-point fractional numbers}
+
+In previous sections we saw that that when we write a binary integer
+such as $10010101_{2}$ it is basically interpreted the same way as
+$149_{10}$---the structure is the same, except that the digit weights
+are powers of 2 instead of powers of 10.  This correspondence inspired
+the unsigned integer representation of \cref{def:bits2n}.  Can we
+perhaps use the same idea to represent fractional numbers?  Yes.  A
+decimal fraction $123.456_{10}$ can be viewed as having weights that
+are \emph{non-negative} powers of $10$ on the left of the decimal
+point, and $negative$ powers to the right.  To compute its value, we
+multiply each digit with the weight.
+
+\begin{example}[Intepretation of decimal fraction $123.456_{10}$]
+\[
+  \begin{array}{lcccccccccccccc}
+    \mathrm{Digit}   &1&&2&&3&.&4&&5&&6 \\
+    \mathrm{Weights} & 10^{2} && 10^{1} && 10^{0} && 10^{-1} && 10^{-2} && 10^{-3} \\
+    \mathrm{Sum} & 100 &+& 20 &+& 3 &+& \frac{4}{10} &+& \frac{5}{100} &+& \frac{6}{1000}
+  \end{array}
+\]
+\end{example}
+Similarly, a binary fractional number $1001.0101$ has weights that are
+powers of $2$, and the ones to the right of the ``binal'' point have
+negative exponents:
+\begin{example}[Interpretation of binary fraction $1001.0101_{2}$]
+\[
+  \begin{array}{lcccccccccccccccc}
+    \mathrm{Digit}   &1&&0&&0&&1&.&0&&1&&0&&1 \\
+    \mathrm{Weights} & 2^{3} && 2^{2} && 2^{1} && 2^{0} && 2^{-1} && 2^{-2} && 2^{-3} && 2^{-4} \\                                                                          \mathrm{Sum} & 8 &+& 0 &+& 0 &+& 1 &+& 0 &+& \frac{1}{4} &+& 0 &+& \frac{1}{16} \\
+    &\multicolumn{8}{l}{= 9.3125_{10}}
+  \end{array}
+\]
+\end{example}
+
+For some word size $w$, we must specify how many of the bits we
+allocate to the integral part (before the binal point) and how many
+are part of the fraction.  In the example above we used a symmetric
+representation with $4$ bits devoted to the integral and fractional
+part.  The crucial property is that this allocation is fixed for a
+given format, and cannot vary.  This is why this number representation
+is called \emph{fixed point}.
+
+\begin{definition}[Fixed-point number]
+  A number representation where a fixed number of bits is allocated to
+  the fractional part.
+\end{definition}
+
+\begin{definition}[Bit vector interpreted as unsigned fixed point]
+  \[
+    \mathrm{Fix2Q}(\bitvector{x_{n+m-1}\cdots x_{m}~x_{m-1}\cdots x_{0}}) =
+    \sum_{i=0}^{n+m-1} x \cdot 2^{i-m}
+  \]
+  where $n,m$ is the number of bits allocated to integral and
+  fractional part, respectively.
+  \label{def:fx2Q}
+\end{definition}
+
+One nice property of fixed-point representation is that we can divide
+and multiply by bit-shifting, just as with integers.  Unfortunately,
+it also has serious limitations.
+
+\paragraph{Limitation \#1} This representation can only represent
+numbers of the form
+\[
+  \frac{x}{2^{k}}
+\]
+for some $x,k$.  This means that numbers such as $0.3_{10}$ cannot be
+represented exactly, but must be approximated.  Allowing 4 bits for
+the fraction, the best approximation is
+\begin{equation*}
+  0.0101_{2} = 0.3125_{10}
+\end{equation*}
+This is not a restriction that is particular to our use of binary.
+Any radix will have numbers that cannot be represented, just as we cannot write
+\[
+  \frac{1}{3}
+\]
+with any finite decimal sequence.
 
 %%% Local Variables:
 %%% mode: latex
