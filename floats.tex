@@ -1,0 +1,485 @@
+\chapter{Floating-Point Numbers}
+\label{sec:floats}
+
+Integers are all well and good, but we often need to solve problems
+that require the use of fractions---that is, we need a machine
+representation of some kind of approximation of rational or real
+numbers.  In this section we will look at the various solutions one
+can come up with to this problem, but ultimately we will focus in
+detail on \emph{floating-point} numbers, which are the most common
+implementation of fractional numbers in modern computers.  This is an
+\emph{enormous} topic, and many devote their entire careers to
+studying number representations.  This chapter is relatively
+superficial, but the particularly interested student can continue
+their studies by reading the \emph{Handbook of Floating-Point
+  Arithmetic}~\cite{muller2018handbook}, from which most of the
+information in this chapter is sourced, or taking courses on numerical
+analysis.
+
+\section{The Basic Problem}
+
+Fractional numbers are inherently more difficult to implement on
+computers because of their density.  Between the numbers $x$ and $y$,
+there are $|x-y|$ integers.  Thus, when we define a fixed-size integer
+representation, there will be a smallest and largest number, but there
+will be no gaps inside this interval.  In contrast, between $x$ and
+$y$ there is an \emph{infinite} number of rational numbers (assuming
+$x\neq y$).  With a $w$-bit fixed-size representation we can at most
+represent $2^{w}$ distinct values, so any nonempty interval of
+rational numbers will necessarily have numbers we cannot represent
+using a fixed-size encoding.  Number representations using an
+arbitrary and value-dependent number of bits can be defined that can
+represent any computable real numbers using a variable number of bits,
+but these are implemented in software rather than in hardware, and are
+\emph{much} slower than fixed-size representations.
+
+One obvious representation is to represent fractions as pairs of
+integers.  For example, the fraction
+\[
+  \frac{1}{3}
+\]
+can be straightforwardly represented as the pair $(1,3)$.  Using
+$w$-bit integers, such a pair could be represented as a $2w$-bit
+vector.  The main problem with this representation is that a given
+number has many possible encodings---e.g. $(1,3)$ and $(2,6)$ both
+represent the same number.  Fractions can be reduced using algorithms
+that have been known for literally thousands of years, but these are
+computationally expensive---certainly not something we want a computer
+to do as part of routine arithmetic.  Another consequence of this
+redundancy is that we also waste encoding space.  As much as possible,
+we desire a representation where distinct bit patterns encode distinct
+numbers.
+
+\subsection{Precision and Accuracy}
+
+Informally, the terms \emph{precision} and \emph{accuracy} are often
+used interchangeably.  In the following we will use them with very
+specific meanings.
+
+\begin{description}
+\item[Precision] means many digits are present in a result.  As an
+  analogy, if someone asks you for the current time and you answer
+  ``twelve hours, four minutes, three seconds, fourteen miliseconds'',
+  then your answer is very precise.
+\item[Accuracy] is how close an approximated or rounded result is to
+  the \emph{true} value.  Following on the analogy above, that very
+  precise answer may be quite inaccurate if it's actually 8 in the
+  morning.  Accuracy is also sometimes called \emph{exactness}.
+\end{description}
+
+Since any finite-sized representation of rational numbers will always
+have gaps, the result of any computation must be rounded to the
+nearest number that can actually be represented.  This is a source of
+inaccuracy.
+
+\section{Fixed-point Fractional Numbers}
+
+In previous sections we saw that that when we write a binary integer
+such as $10010101_{2}$ it is basically interpreted the same way as
+$149_{10}$---the structure is the same, except that the digit weights
+are powers of 2 instead of powers of 10.  This correspondence inspired
+the unsigned integer representation of \cref{def:bits2n}.  Can we
+perhaps use the same idea to represent fractional numbers?  Yes.  A
+decimal fraction $123.456_{10}$ can be viewed as having weights that
+are \emph{non-negative} powers of $10$ on the left of the decimal
+point, and $negative$ powers to the right.  To compute its value, we
+multiply each digit with the weight.
+
+\begin{example}[Interpretation of decimal fraction $123.456_{10}$]
+\[
+  \begin{array}{lcccccccccccccc}
+    \mathrm{Digit}   &1&&2&&3&.&4&&5&&6 \\
+    \mathrm{Weight} & 10^{2} && 10^{1} && 10^{0} && 10^{-1} && 10^{-2} && 10^{-3} \\
+    \mathrm{Sum} & 100 &+& 20 &+& 3 &+& \frac{4}{10} &+& \frac{5}{100} &+& \frac{6}{1000}
+  \end{array}
+\]
+\end{example}
+Similarly, a binary fractional number $1001.0101$ has weights that are
+powers of $2$, and the ones to the right of the \emph{binary
+  point}\footnote{Corresponding to the \emph{decimal point} in a
+  base-10 system.} have negative exponents:
+\begin{example}[Interpretation of binary fraction $1001.0101_{2}$]
+\[
+  \begin{array}{lcccccccccccccccc}
+    \mathrm{Digit}   &1&&0&&0&&1&.&0&&1&&0&&1 \\
+    \mathrm{Weight} & 2^{3} && 2^{2} && 2^{1} && 2^{0} && 2^{-1} && 2^{-2} && 2^{-3} && 2^{-4} \\                                                                          \mathrm{Sum} & 8 &+& 0 &+& 0 &+& 1 &+& 0 &+& \frac{1}{4} &+& 0 &+& \frac{1}{16} \\
+    &\multicolumn{8}{l}{= 9.3125_{10}}
+  \end{array}
+\]
+\end{example}
+
+For some word size $w$, we must specify how many of the bits we
+allocate to the integral part (before the binary point) and how many
+are part of the fraction.  In the example above we used a symmetric
+representation with $4$ bits devoted to the integral and fractional
+part.  The crucial property is that this allocation is fixed for a
+given format, and cannot vary.  This is why this number representation
+is called \emph{fixed point}.
+
+\begin{definition}[Fixed-point number]
+  A number representation where a fixed number of bits is allocated to
+  the fractional part.
+\end{definition}
+
+\begin{definition}[Bit vector interpreted as unsigned fixed point]
+  \[
+    \mathrm{Fix2Q}(\bitvector{x_{n+m-1}\cdots x_{m}~x_{m-1}\cdots x_{0}}) =
+    \sum_{i=0}^{n+m-1} x \cdot 2^{i-m}
+  \]
+  where $n,m$ is the number of bits allocated to integral and
+  fractional part, respectively.
+  \label{def:fx2Q}
+\end{definition}
+
+For simplicity we deal only with non-negative numbers in this
+representation.  Support for negative numbers can be implemented by
+either adding a sign bit, or by interpreting the integral part as a
+Two's Complement number.
+
+One nice property of fixed-point representation is that we can divide
+and multiply by bit-shifting, just as with integers.  Unfortunately,
+it also has serious limitations.
+
+\paragraph{Limitation \#1} This representation can only represent
+numbers of the form
+\[
+  \frac{x}{2^{k}}
+\]
+for some $x,k$.  This means that numbers such as $0.3_{10}$ cannot be
+represented exactly, but must be approximated.  Allowing 4 bits for
+the fraction, the best approximation is
+\begin{equation*}
+  0.0101_{2} = 0.3125_{10}
+\end{equation*}
+This is not a restriction that is particular to our use of binary.
+Any radix will have numbers that cannot be represented, just as we
+cannot write
+\[
+  \frac{1}{3}
+\]
+with any finite decimal sequence.
+
+\paragraph{Limitation \#2} Given $w$ bits to represent fixed-point
+numbers, we need to decide once and for all how many bits we dedicate
+to the integral part, and how many to the fraction.  If we allocate
+many bits to the integral part, we will be able to represent larger
+numbers, but the distance between neighbouring representable numbers
+will be breater.  This is illustrated on \cref{fig:fixedpoint}.
+
+Note in particular that fixed-point representations have lower
+relative precision for numbers close to zero.  Suppose $w=8$ and we
+are using $4$ bits for the fraction; then the next highest number from
+1 is $1.00625$---a relative distance of $0.00625$.  But for $15$, the
+next number is $15.00625$---a relative distance of $0.00004167$.
+
+\begin{figure}
+  \begin{framed}
+  \centering
+    \begin{description}
+  \item[\textbf{$1$ bit for fraction}]\hfill
+    \begin{itemize}
+    \item Largest number: $1111111.1_{2} = 127.5_{10}$
+    \item Increment: $0000000.1_{2}=0.5_{10}$
+    \end{itemize}
+  \item[\textbf{$7$ bits for fraction}]\hfill
+    \begin{itemize}
+    \item Largest number: $1.1111111_{2} = 1.9921875_{10}$
+    \item Increment: $0.0000001_{2}=0.0078125_{10}$
+    \end{itemize}
+  \item[\textbf{$4$ bits for fraction}]\hfill
+    \begin{itemize}
+    \item Largest number: $1111.1111_{2} = 15.9375_{10}$
+    \item Increment: $0000.0001_{2}=0.0625_{10}$
+    \end{itemize}
+  \end{description}
+  \end{framed}
+  \caption{The fixed-point dilemma for $w=8$.  The \emph{increment} is the
+    distance between neighbouring numbers.}
+  \label{fig:fixedpoint}
+\end{figure}
+
+Ideally, we want a number representation where the relative distance
+between numbers is constant---meaning that the absolute distance
+between representable numbers close to zero is small, while the
+distance between numbers far from zero is large.  Another way of
+looking at this of the $2^{w}$ distinct numbers possible for a $w$-bit
+representation, most of them should be close to zero.  We can view
+this as a number comprising $w$ digits where the binary point is not
+fixed, but rather ``floating'', which is why the common name for this
+type of numbers is \emph{floating-point numbers}.
+
+\section{Intuition behind floating-point numbers}
+
+Before delving into the technical details of floating-point numbers,
+let us build up a little intuition for how they work.  floating-point
+numbers (or just \emph{floats}) are inspired by decimal scientific
+notation where a number is represented as
+\begin{equation}
+  x = \alpha \times 10^{\beta}
+\end{equation}
+where the \emph{significand} $\alpha$ is any number and the exponent
+\emph{exponent} $\beta$ is an integer.  Obviously we can represent any
+number simply by setting $\beta=0$ and using only $\alpha$.  However,
+a common convention is to require that $|\alpha|<10$, in which case we
+say a number is \emph{normalised}.
+
+\begin{example}[Normalisation in scientific notation]
+  The number
+  \[
+    x = -123 \times 10^{-1}
+  \]
+  is not normalised, but we can normalise it by dividing the mantissa
+  by $10$ and incrementing the mantissa by $1$, giving
+  \[
+    x -1.23 \times 10^{1}.
+  \]
+\end{example}
+
+Now suppose we make this representation finite by requiring
+\[
+  -100 < \beta < 100
+\]
+and also that $\alpha$ has exactly two digits to the right of the
+decimal point, meaning it is always of the form $x.xx$, possibly with
+a sign.  This means we can now encode any number as three digits for
+$\alpha$ (and a sign) plus two digits for $\beta$ (and a sign).  But
+what are the consequences for which numbers can be represented?
+
+One consequence is that we now have a largest representable number,
+namely the one where $\alpha=9.99$ and $\beta=99$.  Another is that
+the distance between neighbouring numbers now depends on the exponent
+$\beta$.
+\begin{example}[Distances between neighbouring numbers]
+\begin{align}
+  |1.23\times 10^{1} - 1.24\times 10^{1}| &= 0.1 \\
+  |9.99\times 10^{1} - 0.01\times 10^{2}| &= 0.1 \\
+  |0.01\times 10^{1} - 0.02\times 10^{2}| &= 0.2 \\
+  |1.23\times 10^{50} - 1.24\times 10^{50}| &= 5
+\end{align}
+\end{example}
+
+This is the basic idea behind floating-point numbers, and while
+floating-point number formats have significant extra complexities to
+deal with various numerical challenges and to make them efficiently
+implementable on binary electronic computers, it all comes back to
+this idea of having a normalised scientific representation comprising
+a significand and exponent.
+
+\section{IEEE 754}
+
+floating-point formats were widely supported even by the earliest
+computers, but they diverged widely in how they were implemented, how
+much precision they offered, and what semantics they used for
+rounding.  This made it difficult for numerical programs written on
+one computer to run correctly on another computer.  Significant effort
+was spent on standardising floating-point arithmetic, and in 1985, the
+IEEE 754 standard was ratified.  It has since been updated and
+extended, but the core concepts and principles are unchanged.  The
+IEEE 754 standard is now essentially universally supported, except for
+very specialised processors.
+
+Apart from specifying rules and encodings of conventional rational
+numbers, IEEE 754 also mandates the existence of certain special
+values:
+
+\begin{itemize}
+\item NaN (``not a number''), a family of special values that are
+  produced by invalid operations such as $\sqrt{-1}$.  The purpose of
+  NaN is to ensure that all arithmetic operations are ``closed'', in
+  that they produce a value that is representable in the IEEE 754
+  value representation, even though it is literally speaking \emph{not
+    a number}.
+\item Positive and negative infinity, which have two important uses.
+  One is to represent the result of operations such as division by
+  zero.  Another is to represent overflow, where the result of an
+  arithmetic operation lies outside the representable number range.
+  Compare this to integers, where the most typical result is
+  wraparound.
+\end{itemize}
+
+IEEE defines various floating-point formats.  All of them are
+characterised by four integers
+
+\begin{itemize}
+\item a \emph{radix}, which we will assume to be 2 although IEEE 754
+  also specifies decimal floating-point formats;
+\item a \emph{precision} $p \geq 2$, roughly corresponding to the
+  number of ``significant bits'' in the significand;
+\item two \emph{extremal exponents} $e_{\text{min}},e_{\text{max}}$
+  such that $e_{\text{min}} < e_{\text{max}}$.  In all formats
+  specified by IEEE 754, $e_{\text{min}}=1-e_{\text{max}}$.
+\end{itemize}
+
+The two most common IEEE 754 formats are binary32 and binary64,
+corresponding to the \texttt{float} and \texttt{double} types in most
+C-like programming languages.  The parameters for the most common
+binary IEEE 754 formats are shown in \cref{tab:ieee-formats}.
+
+\begin{table}
+  \centering
+  \begin{tabular}{|l||c|c|c|}
+    \hline
+    Name & binary16 & binary32 & binary64 \\\hline
+    Informal name & Half precision & Single precision & Double precision \\\hline
+    C type & N/A & \texttt{float} & \texttt{double} \\\hline
+    $p$ & $11$ & $24$ & $53$ \\\hline
+    $e_{\text{max}}$ & $+15$ & $+127$ & $+1023$ \\\hline
+    $e_{\text{min}}$ & $-14$ & $-126$ & $-1022$ \\\hline
+  \end{tabular}
+  \caption{The most common IEEE 754 floating-point formats.  Half
+    precision floats are not supported in standard C, but are
+    relatively common in graphics programs.  More exotic non-standard
+    formats are also used in machine learning.}
+  \label{tab:ieee-formats}
+\end{table}
+
+A finite floating-point number expressed in such a format is a number
+$x$ for which there exists a representation $(M,e)$ such that
+\begin{equation}
+  x = -1^{s} \cdot{} M \cdot{} 2^{e-p+1}
+\end{equation}
+where
+\begin{itemize}
+\item $M$ is an integer such that $|M| \leq 2^{p}-1$, called the
+  \emph{integral significand};
+\item $e$ is an integer such that
+  $e_{\text{min}} \leq e \leq e_{\text{max}}$, called the
+  \emph{exponent}.
+\end{itemize}
+This representation is not necessarily unique.  Consider that for
+$p=3$
+\begin{equation}
+  16 = 16\cdot{}2^{0} = 32\cdot{}2^{-1}
+\end{equation}
+To address this, we begin by slightly refining the representation such
+that a number $x$ is expressed as
+\begin{equation}
+  x = -1^{s} \cdot{} m \cdot{} 2^e
+\end{equation}
+where
+\begin{itemize}
+\item $e$ is as before;
+\item $s$ is the \emph{sign bit}, which is 1 for negative numbers;
+\item $m=|M|\cdot{}2^{1-p}$ is called the \emph{normal significand}.
+\end{itemize}
+
+Now, in order to ensure a unique representation for a given number, we
+require that floating-point numbers are normalised, by always choosing
+the representation for which the exponent is smallest (but of course
+not less than $e_{\text{min}}$).  This implies that $0 \leq m < 2$.
+
+Further, whenever $1 \leq m < 2$, we say that $x$ is a \emph{normal}
+number.  Intuitively we can see $m$ as indicating a number of the form
+$1.xxx_{2}$, where $m$ constitutes the binary digits to the right of
+the binary point.  These digits are sometimes called the
+\emph{fraction}.
+
+Otherwise, when $e=e_{\text{min}}$, we must also have that
+$0 \leq m < 1$, and we call this case a \emph{subnormal} number.  For
+subnormal numbers, the bit before the binary point must necessarily be
+0.  This means that when we save $m$ in a bit vector, we can elide the
+bit before the binary point, because it can be inferred from $e$, thus
+saving a a bit.  The special case of zero will be discussed later.
+
+\subsection{Bitwise representation}
+
+The representation of a floating-point number as a bit vector consists
+of three fields, $S$, $E$ and $T$.
+
+\begin{definition}[Fields of a floating-point number $x$]
+  \[
+    \bitvector{\underbrace{S}_{1~bit}~\underbrace{E_{W_{E}-1}\cdots{E_{0}}}_{W_{e}~\text{bits}}~\underbrace{T_{p-2}\cdots{}T_{0}}_{p-1~\text{bits}}}
+  \]
+  where $S$ encodes $s$ directly, $E$ encodes $e$, and $T$ encodes
+  $m$.
+  \label{def:float-fields}
+\end{definition}
+
+The $S$ field is one bit in length and directly corresponds to $s$.
+The $E$ field consists of $W_{e}$ bits and the $T$ field consists of
+$p-1$ bits, but still represents $p$ bits of information, because an
+extra bit can be deduced from the context as discussed above. How
+these fields are decoded as $e$ and $m$ depends on their exact values.
+In the normal case, $E$ encodes $e$ as a \emph{biased} number, which
+we briefly saw in \cref{sec:words}.  Specifically, $E$ encodes an
+unsigned integer from which we subtract a \emph{bias} $b$ to obtain
+the possibly negative $e$.  For all IEEE formats, $b=e_{\text{max}}$,
+which lets $E$ encode integers ranging from $e_{\text{min}}$ to
+$e_{\text{max}}$.
+
+In total, decoding a floating point number represented as a bit vector
+in the form from \cref{def:float-fields} involves the following cases.
+
+\begin{itemize}
+\item If $E = \bitvector{1\cdots{} 1}$ (a sequence of ones) and
+  $T \neq \bitvector{0\cdots{} 0}$, then the bit vector represents
+  not-a-number (NaN).
+\item If $E = \bitvector{1\cdots{} 1}$ and
+  $T = \bitvector{0\cdots{} 0}$ then the bit vector represents
+  $\pm\infty$, with sign determined by $S$.
+\item If $E = \bitvector{0\cdots{} 0}$ and
+  $T = \bitvector{0\cdots{} 0}$, then the bit vector represents
+  $\pm 0$, with sign determined by $S$.
+\item If $E \neq \bitvector{0\cdots{} 0}$ and
+  $E \neq \bitvector{1\cdots{} 1}$, then the bit vector represents the
+  normal number
+  \[
+    (-1)^{s} \cdot m \cdot 2^e
+  \]
+  where
+  \[
+    \begin{array}{ccr}
+      b &=& e_{\text{max}} \\
+      s &=& \mathrm{Bits2N}(\bitvector{S}) \\
+      m &=& 1+\mathrm{Bits2N}(\bitvector{T}) \cdot{} 2^{1-p} \\
+      e &=& \mathrm{Bits2N}(\bitvector{E}) - b
+    \end{array}
+  \]
+\item If $E = \bitvector{0\cdots{} 0}$ and
+  $T \neq \bitvector{1\cdots{} 1}$, then the bit vector represents the
+  subnormal number
+  \[
+    (-1)^{s} \cdot m \cdot 2^{e_{\text{min}}}
+  \]
+  where
+  \[
+    \begin{array}{ccr}
+      s &=& \mathrm{Bits2N}(\bitvector{S}) \\
+      m &=& 0+\mathrm{Bits2N}(\bitvector{T}) \cdot{} 2^{1-p} \\
+    \end{array}
+  \]
+\end{itemize}
+
+These cases form a conversion function.  For space reasons, we will
+not write it down in that form.
+
+\begin{example}[Interpreting a bit vector as a float]
+  Using the binary16 format from \cref{tab:ieee-formats}, we interpret
+  \[
+    \bitvector{111010001010001}
+  \]
+  as a float.  First we split the bit vector into fields.
+  \[
+    \begin{array}{lll}
+      S=\bitvector{1} & E=\bitvector{11010} & T=\bitvector{0001010001}
+    \end{array}
+  \]
+  This means we are dealing with a normal number.  We now compute
+  \[
+    \begin{array}{ccr}
+      b &=& 15 \\
+      s &=& 1 \\
+      m &=& 1 + 81 \cdot 2^{-10} \\
+      e &=& 11
+    \end{array}
+  \]
+  giving the final result
+  \[
+    (-1)^{s} \cdot m \cdot 2^{e} = -2210
+  \]
+\end{example}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "notes"
+%%% End:
