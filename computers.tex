@@ -1,6 +1,65 @@
 \chapter{Computer Systems}
 \label{chap:computers}
 
+There is nothing a computer can that a human cannot also do.  The only
+advantage that computers offer is far greater speed.  As the machines
+of the industrial revolution amplified the physical power of humanity
+beyond what our bodies are capable of, so do the machines of the
+computer revolution amplify our computational power beyond what is
+possible using only our brains.  Therefore, while it is a common trope
+that ``programmer time is more valuable than computer time'', and that
+even inexpertly written programs are \emph{fast enough}, ultimately it
+is execution speed that is the reason why computers are important and
+interesting.
+
+In the chapters that follow, we will look at how modern computers work
+and how to construct programs that run fast.  We will take a fairly
+high level view---there are many details that will only be covered
+briefly, and reading this text will not make you an expert programmer.
+However, it will hopefully give you an appreciation of how to design
+programs that are not \emph{accidentally} inefficient, and where to
+start looking when you have a program that works correctly, but is too
+slow to be useful.  This focus on \emph{performance} is the underlying
+theme of the text.  You've been hopefully been taught how to write
+\emph{correct} programs; now is the time to make them fly.
+
+Our initial focus will be on understanding the distinction between
+\emph{representation} and \emph{interpretation}.  Computers know
+nothing of images, graphs, sounds, text, files, networks, humans, or
+even---when you really get down to it---numbers.  Whenever we want to
+process and transform data that is meaningful to humans, we
+first have to represent it in a way that the machine can understand,
+which usually boils down to sequences of bits.  How we design such
+encodings has significant performance and convenience implications.
+While this view will be everpresent throughout the course, it is
+especially the focus of \cref{chap:bits,chap:floats,chap:bytes}.
+
+Not only do computers not comprehend most data that is meaningful to
+humans, they also do not understand human commands.  Instead they
+follow orders encoded as \emph{machine code}, which can be seen as a
+particularly human-hostile programming languages.  In
+\cref{chap:compiled-interpreted} look at how computers are made
+accessible to humans through programming languages, look at the
+various ways we can categorise and classify them, and what the
+implications might be for performance.
+
+For modern computers, sheer computational power---e.g. how fast we can
+multiply two numbers---is rarely the main performance bottleneck.
+Indeed, it is often far more costly to retrieve data than it is to
+operate on it once it has been fetched.  In
+\cref{chap:datalayout,chap:locality} we will look at how larger
+collections of data can be structured and what the implications are
+for performance.  In particular, the notion of \emph{locality} is one
+of the most important concerns for program efficiency.
+
+Beyond locality, another crucial technique necessary to obtain good
+performance is \emph{parallelism}.  Modern computers are able to
+perform multiple operations simultaneously, and if we write programs
+that do not take advantage of this capability, we are in effect not
+exploiting the computer to its full extent.
+\Cref{chap:openmp,chap:scaling} discuss programming and measurement
+techniques for parallel programming.
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "notes"

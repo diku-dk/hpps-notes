@@ -1,5 +1,5 @@
 \chapter{Floating-Point Numbers}
-\label{sec:floats}
+\label{chap:floats}
 
 Integers are all well and good, but we often need to solve problems
 that require the use of fractions---that is, we need a machine
@@ -445,7 +445,7 @@ in the form from \cref{def:float-fields} involves the following cases.
   \[
     \begin{array}{ccr}
       s &=& \mathrm{Bits2N}(\bitvector{S}) \\
-      m &=& 0+\mathrm{Bits2N}(\bitvector{T}) \cdot{} 2^{1-p} \\
+      m &=& \mathrm{Bits2N}(\bitvector{T}) \cdot{} 2^{1-p} \\
     \end{array}
   \]
 \end{itemize}

@@ -22,7 +22,7 @@ Conventionally, and in this text, the two possible values are written
 $1$ and $0$, as a reference to their interpretation as numbers, but
 this merely a question of notation.  We could equally well have used
 \emph{true}/\emph{false}, \emph{a}/\emph{b}, \emph{yes}/\emph{no}, or
-anything else that allows us to distinguish unambiguously between the
+any other notation that allows us to distinguish unambiguously between the
 two possible values.  By convention, we say that a bit is \emph{unset}
 when $1$ and \emph{unset} when $0$.
 
@@ -54,8 +54,8 @@ Single bits rarely occur in isolation.  Typically we use a sequence of
 bits, called a \emph{bit vector}.
 
 \begin{definition}[Bit vector]
-  A bit vector of length $w$ is an ordered sequence of $w$ bits, which
-  we write as $\bitvector{x_{w-1}\ldots{}x_{0}}$.
+  A bit vector $x$ of length $w$ is an ordered sequence of $w$ bits,
+  which we write as $x=\bitvector{x_{w-1}\ldots{}x_{0}}$.
 \end{definition}
 
 Note that the convention is that bit $x_{0}$ in a bit vector is
@@ -271,7 +271,7 @@ represent integers in the range $[0,2^{w}-1]$, which certainly feels
 intuitive, but we could just as well have defined a conversion
 function that encoded integers in the range
 $[k,k+2^{w}-1]$\footnote{In fact, this encoding, known as \emph{biased
-    numbers} will make in appearance in \cref{sec:floats}}.  We will
+    numbers} will make in appearance in \cref{chap:floats}}.  We will
 also have to decide what happens when an operation produces a value
 that lies outside the representable range.
 
