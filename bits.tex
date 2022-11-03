@@ -263,35 +263,44 @@ hardware-supported fixed size is called a \emph{word}.  Generally,
 when we use the term \emph{$w$-bit word}, we mean a bit vector
 containing $w$ bits.
 
+\begin{definition}{Word}
+  A word is a bit vector of some fixed size $w$, on which the computer
+  can efficiently operate directly.
+\end{definition}
+
 A $w$-bit word can express $2^{w}$ different permutations of bits,
 meaning it can represent $2^{w}$ different values.  When deciding on a
 value representation, deciding how to best exploit this limited range
 is important.  In \cref{def:bits2n} we decided that a $w$-bit word can
 represent integers in the range $[0,2^{w}-1]$, which certainly feels
 intuitive, but we could just as well have defined a conversion
-function that encoded integers in the range
-$[k,k+2^{w}-1]$\footnote{In fact, this encoding, known as \emph{biased
-    numbers} will make in appearance in \cref{chap:floats}}.  We will
-also have to decide what happens when an operation produces a value
-that lies outside the representable range.
+function that encoded integers in the range $[b,b+2^{w}-1]$ for some
+$b$\footnote{In fact, this encoding, known as \emph{biased numbers}
+  will make in appearance in \cref{chap:floats}}.  We will also have
+to decide what happens when an operation produces a value that lies
+outside the representable range.
 
 As a notational convenience, the bitwise operations are extended to
 operate elementwise on words as follows:
 
 \begin{definition}[Bitwise operations on words]
-  \begin{align*}
-    \bitvector{x_{w-1}\cdots x_{0}} &\land \bitvector{y_{w-1}\cdots y_{0}} &&\defeq
-    \bitvector{x_{w-1} \land y_{w-1}\cdots x_{0} \land y_{0}} \\
-    \bitvector{x_{w-1}\cdots x_{0}} &\lor \bitvector{y_{w-1}\cdots y_{0}} &&\defeq
-    \bitvector{x_{w-1} \lor y_{w-1} \cdots x_{0} \lor y_{0}} \\
-    \bitvector{x_{w-1}\cdots x_{0}} &\lxor \bitvector{y_{w-1}\cdots y_{0}} &&\defeq
-    \bitvector{x_{w-1} \lxor y_{w-1}\cdots x_{0} \lxor y_{0}} \\
-    &\neg \bitvector{x_{w-1}\cdots x_{0}} &&\defeq \bitvector{\neg x_{w-1}\cdots \neg x_{0}}
-  \end{align*}
+  \[
+    \begin{array}{rcl}
+      \bitvector{x_{w-1}\cdots x_{0}} \land \bitvector{y_{w-1}\cdots y_{0}}
+      &\defeq& \bitvector{x_{w-1} \land y_{w-1}\cdots x_{0} \land y_{0}} \\
+      \bitvector{x_{w-1}\cdots x_{0}} \lor \bitvector{y_{w-1}\cdots y_{0}}
+      &\defeq& \bitvector{x_{w-1} \lor y_{w-1} \cdots x_{0} \lor y_{0}} \\
+      \bitvector{x_{w-1}\cdots x_{0}} \lxor \bitvector{y_{w-1}\cdots y_{0}}
+      &\defeq& \bitvector{x_{w-1} \lxor y_{w-1}\cdots x_{0} \lxor y_{0}} \\
+      \neg \bitvector{x_{w-1}\cdots x_{0}}
+      &\defeq& \bitvector{\neg x_{w-1}\cdots \neg x_{0}}
+    \end{array}
+  \]
   \label{def:wordbitwise}
 \end{definition}
 
-This is also the form they take in programming languages such as C.
+This is also the semantics bitwise operations have in programming
+languages such as C.
 
 \section{Bit Arithmetic}
 \label{sec:bit-arithmetic}
@@ -573,10 +582,10 @@ for integers in most modern computers.
 \label{sec:twos-complement}
 
 The overwhelmingly most common integer representation in modern
-computers is \emph{two's complement}.  In this representation, a
+computers is \emph{Two's Complement}.  In this representation, a
 negative number is encoded by the logically negated bit sequence of
-the corresponding positive number, plus one.  This lets us define an
-encoding function.
+the corresponding unsigned positive number, plus one.  This lets us
+define an encoding function.
 
 \begin{definition}[Integer to Two's Complement]
 \begin{align*}
@@ -592,8 +601,8 @@ encoding function.
 Note that we are using word negation (\cref{def:wordbitwise}) in the
 above formula.
 
-An equivalent view of Two's Complement is that represents integers by
-assigning each bit a weight, just like with unsigned numbers, but
+An equivalent view of Two's Complement is that it represents integers
+by assigning each bit a weight, just like with unsigned numbers, but
 assigns the most significant bit (the \emph{sign bit}) a large
 \emph{negative} weight.  This is the intuition we use in our decoding
 function.
@@ -633,14 +642,16 @@ Complement representation the exact same way that we add unsigned
 numbers using \cref{def:intadd}, and get the right result (ignoring
 overflow).  For non-negative numbers, this is not terribly surprising,
 as these have identical representations in unsigned and Two's
-Complement representation.  The reason is that negative numbers in
-Two's Complement maintain their relative ordering when interpreted as
-unsigned numbers, which is not the case for sign-magnitude.  It is
-likely that it is this property that has made Two's Complement the
-dominant integer representation, as it means a computer designer can
-use the same circuitry for processing signed and unsigned numbers.
+Complement representation.  For negative numbers, the reason this
+works is that negative numbers in Two's Complement maintain their
+relative ordering when interpreted as unsigned numbers, which is not
+the case for sign-magnitude.  It is likely that it is this property
+that has made Two's Complement the dominant integer representation, as
+it means a computer designer can use the same circuitry for computing
+signed and unsigned numbers.  Only when relatively ordering Two's
+Complement numbers does a computer need to inspect the sign bit.
 
-\subsubsection{Arithmetic negation}
+\subsubsection{Arithmetic Negation}
 
 Negation of Two's Complement numbers is done by flipping all the bits
 (a \emph{logical negation}) and then incrementing by one:
@@ -660,7 +671,7 @@ negative number is an identity operation.
     \mathrm{negTC}(\bitvector{1000})
     &= \bitvector{\neg 1 \neg 0 \neg 0 \neg 0} \BitAdd \bitvector{0001} \\
     &= \bitvector{0 1 1 1} \BitAdd \bitvector{0001} \\
-    &= \bitvector{1 0 0 0} \\
+    &= \bitvector{1 0 0 0}
   \end{align}
 \end{example}
 
@@ -679,16 +690,16 @@ define subtraction of numbers in Two's Complement:
 In \cref{sec:bitshift} we saw how shifting by $k$ corresponds to
 multiplication and division by $2^{k}$.  But while left-shifting works
 equivalently for unsigned and Two's Complement, right shifting a
-negative number tends not to produce the arithmetically right result.
+negative number tends not to produce the arithmetically correct result.
 
-\begin{example}{Logically right-shifting negative numbers}
+\begin{example}[Logically right-shifting Two's Complement numbers]
   \begin{align}
     \mathrm{Z2TC}(4) \BitSrl 1 &&= \bitvector{0100} \BitSrl 1 &&= \bitvector{0010} &&= \mathrm{Z2TC}(2) \\
     \mathrm{Z2TC}(-4) \BitSrl 1 &&= \bitvector{1100} \BitSrl 1 &&= \bitvector{0110} &&= \mathrm{Z2TC}(6)
   \end{align}
 \end{example}
 
-We can conser an unsigned number as consisting of an arbitrary number
+We can consider an unsigned number as consisting of an arbitrary number
 of $0$ bits to the left of its most significant bit, in the same
 manner we can write decimal numbers with as many leading zeroes as we
 desire.  When we right-shift, it is these zeroes that are inserted.

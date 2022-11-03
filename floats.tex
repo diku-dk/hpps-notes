@@ -57,7 +57,7 @@ used interchangeably.  In the following we will use them with very
 specific meanings.
 
 \begin{description}
-\item[Precision] means many digits are present in a result.  As an
+\item[Precision] is how many digits are present in a result.  As an
   analogy, if someone asks you for the current time and you answer
   ``twelve hours, four minutes, three seconds, fourteen miliseconds'',
   then your answer is very precise.
@@ -69,8 +69,10 @@ specific meanings.
 
 Since any finite-sized representation of rational numbers will always
 have gaps, the result of any computation must be rounded to the
-nearest number that can actually be represented.  This is a source of
-inaccuracy.
+nearest number that can actually be represented in limited precision.
+This is a source of inaccuracy.  While we focus mostly on
+representation rather than calculation, we will return to the issue of
+rounding in \cref{sec:rounding}.
 
 \section{Fixed-point Fractional Numbers}
 
@@ -334,36 +336,33 @@ binary IEEE 754 formats are shown in \cref{tab:ieee-formats}.
 \end{table}
 
 A finite floating-point number expressed in such a format is a number
-$x$ for which there exists a representation $(M,e)$ such that
-\begin{equation}
-  x = -1^{s} \cdot{} M \cdot{} 2^{e-p+1}
-\end{equation}
+$x$ for which there exists a representation $(s,m,e)$ defined as
+follows.
+
+\begin{definition}[Representation of floating-point number $x$]
+\[
+  x = -1^{s} \cdot{} m \cdot{} 2^e
+\]
 where
 \begin{itemize}
-\item $M$ is an integer such that $|M| \leq 2^{p}-1$, called the
-  \emph{integral significand};
+\item $s$ is the \emph{sign bit}, which is 1 for negative numbers;
+\item $m$ is a number called the \emph{normal significand}.
 \item $e$ is an integer such that
   $e_{\text{min}} \leq e \leq e_{\text{max}}$, called the
   \emph{exponent}.
 \end{itemize}
-This representation is not necessarily unique.  Consider that for
-$p=3$
-\begin{equation}
-  16 = 16\cdot{}2^{0} = 32\cdot{}2^{-1}
-\end{equation}
-To address this, we begin by slightly refining the representation such
-that a number $x$ is expressed as
-\begin{equation}
-  x = -1^{s} \cdot{} m \cdot{} 2^e
-\end{equation}
-where
-\begin{itemize}
-\item $e$ is as before;
-\item $s$ is the \emph{sign bit}, which is 1 for negative numbers;
-\item $m=|M|\cdot{}2^{1-p}$ is called the \emph{normal significand}.
-\end{itemize}
+\label{def:float-rep}
+\end{definition}
 
-Now, in order to ensure a unique representation for a given number, we
+The possible values of $m$ is related to $p$ in a way that we will
+specify in \cref{sec:float-bits}.  \Cref{def:float-rep} does not
+specify unique representation for every number.  Consider
+
+\begin{equation}
+  16 = -1^{0}\cdot{} 16\cdot{}2^{0} = -1^{0}\cdot{} 32\cdot{}2^{-1}
+\end{equation}
+
+In order to ensure a unique representation for a given number, we
 require that floating-point numbers are normalised, by always choosing
 the representation for which the exponent is smallest (but of course
 not less than $e_{\text{min}}$).  This implies that $0 \leq m < 2$.
@@ -377,18 +376,24 @@ the binary point.  These digits are sometimes called the
 Otherwise, when $e=e_{\text{min}}$, we must also have that
 $0 \leq m < 1$, and we call this case a \emph{subnormal} number.  For
 subnormal numbers, the bit before the binary point must necessarily be
-0.  This means that when we save $m$ in a bit vector, we can elide the
-bit before the binary point, because it can be inferred from $e$, thus
-saving a a bit.  The special case of zero will be discussed later.
+0.  That is, in this case $m$ indicates a number of the form
+$0.xxx_{2}$.  This means that when we encode $m$ in a bit vector, we
+can elide the bit before the binary point, because it can be inferred
+from $e$, thus saving a a bit.
 
-\subsection{Bitwise representation}
+The special case of zero will be discussed later.
 
-The representation of a floating-point number as a bit vector consists
-of three fields, $S$, $E$ and $T$.
+\subsection{Bit Vector Representation}
+\label{sec:float-bits}
+
+By \cref{def:float-rep}, a floating-point number is represented by
+three numbers $s,e,m$.  As a bit vector, these are encoded as tree
+fields $S$, $E$ and $T$.  Further, some bit patterns are reserved to
+express NaN, infinity, and zero.
 
 \begin{definition}[Fields of a floating-point number $x$]
   \[
-    \bitvector{\underbrace{S}_{1~bit}~\underbrace{E_{W_{E}-1}\cdots{E_{0}}}_{W_{e}~\text{bits}}~\underbrace{T_{p-2}\cdots{}T_{0}}_{p-1~\text{bits}}}
+    \bitvector{\underbrace{S_{0}}_{1~bit}~\underbrace{E_{r-1}\cdots{E_{0}}}_{r~\text{bits}}~\underbrace{T_{p-2}\cdots{}T_{0}}_{p-1~\text{bits}}}
   \]
   where $S$ encodes $s$ directly, $E$ encodes $e$, and $T$ encodes
   $m$.
@@ -396,7 +401,7 @@ of three fields, $S$, $E$ and $T$.
 \end{definition}
 
 The $S$ field is one bit in length and directly corresponds to $s$.
-The $E$ field consists of $W_{e}$ bits and the $T$ field consists of
+The $E$ field consists of $r$ bits and the $T$ field consists of
 $p-1$ bits, but still represents $p$ bits of information, because an
 extra bit can be deduced from the context as discussed above. How
 these fields are decoded as $e$ and $m$ depends on their exact values.
@@ -413,7 +418,10 @@ in the form from \cref{def:float-fields} involves the following cases.
 \begin{itemize}
 \item If $E = \bitvector{1\cdots{} 1}$ (a sequence of ones) and
   $T \neq \bitvector{0\cdots{} 0}$, then the bit vector represents
-  not-a-number (NaN).
+  not-a-number (NaN).\footnote{Note that \emph{multiple} NaNs exist,
+    since $T$ can have multiple possible values.  This is sometimes
+    called the NaN \emph{payload}, and can be used to store
+    information about the origin of the NaN value.}
 \item If $E = \bitvector{1\cdots{} 1}$ and
   $T = \bitvector{0\cdots{} 0}$ then the bit vector represents
   $\pm\infty$, with sign determined by $S$.
@@ -430,9 +438,9 @@ in the form from \cref{def:float-fields} involves the following cases.
   \[
     \begin{array}{ccr}
       b &=& e_{\text{max}} \\
-      s &=& \mathrm{Bits2N}(\bitvector{S}) \\
-      m &=& 1+\mathrm{Bits2N}(\bitvector{T}) \cdot{} 2^{1-p} \\
-      e &=& \mathrm{Bits2N}(\bitvector{E}) - b
+      s &=& \mathrm{Bits2N}(S) \\
+      m &=& 1+\mathrm{Bits2N}(T) \cdot{} 2^{1-p} \\
+      e &=& \mathrm{Bits2N}(E) - b
     \end{array}
   \]
 \item If $E = \bitvector{0\cdots{} 0}$ and
@@ -444,8 +452,8 @@ in the form from \cref{def:float-fields} involves the following cases.
   where
   \[
     \begin{array}{ccr}
-      s &=& \mathrm{Bits2N}(\bitvector{S}) \\
-      m &=& \mathrm{Bits2N}(\bitvector{T}) \cdot{} 2^{1-p} \\
+      s &=& \mathrm{Bits2N}(S) \\
+      m &=& \mathrm{Bits2N}(T) \cdot{} 2^{1-p} \\
     \end{array}
   \]
 \end{itemize}
@@ -478,6 +486,9 @@ not write it down in that form.
     (-1)^{s} \cdot m \cdot 2^{e} = -2210
   \]
 \end{example}
+
+\section{Rounding}
+\label{sec:rounding}
 
 %%% Local Variables:
 %%% mode: latex
