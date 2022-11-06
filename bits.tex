@@ -101,7 +101,7 @@ encodings where this is not the case.
 
 To completely specify the encoding of natural numbers, we must define
 how a bit vector of length $w$ is interpreted as a number.  Here we do
-treat single bits as numbers, $0$ or $1$, and multiplying them with a
+treat single bits as numbers, $0$ or $1$, and multiply them with a
 \emph{weight}.
 
 \begin{definition}[Bit vector to natural number]
@@ -111,7 +111,7 @@ treat single bits as numbers, $0$ or $1$, and multiplying them with a
 \label{def:bits2n}
 \end{definition}
 
-\begin{example}
+\begin{example}[Interpreting $\bitvector{1101}$ as natural number]
   \[
     \begin{array}{rcl}
       \mathrm{Bits2N}(\bitvector{1101}) & = & 1 \cdot 2^{0} + 0 \cdot 2^{1} + 1 \cdot 2^{2} + 1 \cdot 2^{3} \\
@@ -133,13 +133,15 @@ and is defined by the following recursive procedure.
                                       \bitvector{\mathrm{N2Bits}_{w-1}(\lfloor\frac{x}{2}\rfloor)}\bitvector{1} & \text{$x$ is odd}
                                     \end{cases}
   \end{align}
+  \label{def:n2bits}
 \end{definition}
 
 Note that $N2Bits_{w}(x)$ always produces a bit vector with $w$ bits,
-no matter the magnitude of $x$.  We will return to this in
+no matter the magnitude of $x$.  This is because we tend to work only
+with bit vectors of some fixed size. We will return to this in
 \cref{sec:words}.
 
-  \begin{example}
+  \begin{example}[Encoding $9$ as bit vector]
 \begin{align}
   \mathrm{N2Bits}_{4}(9) &= \mathrm{N2Bits}_{4}(2\cdot{}4 + 1) \\
             &= \mathrm{N2Bits}_{3}(4) \bitvector{1} \\
@@ -150,14 +152,24 @@ no matter the magnitude of $x$.  We will return to this in
 \end{align}
   \end{example}
 
-  This representation can express only non-negative numbers, and is
-  called \emph{unsigned} for reasons we will discuss in
-  \cref{sec:signed-numbers}, where we also treat negative numbers.
+This representation can express only non-negative numbers, and is
+therefore called \emph{unsigned}, because there can be no leading
+minus sign. In \cref{sec:signed-numbers} we will discuss negative
+numbers.
 
-  Having an encoding of numbers is not terribly useful unless we can
-  also perform \emph{operations}, such as arithmetic, on numbers
-  represented in the given encoding.  However, before we can do that,
-  we have to talk about Boolean logic.
+When $x \geq 2^{w}$, then $x$ cannot be encoded with a $w$-bit vector
+by \cref{def:n2bits}.  Intuitively, $x$ is \emph{truncated} and only
+the lower $w$ bits of its ``full'' representation is included.  This
+is an example of \emph{overflow}, which we will return to in
+\cref{sec:overflow}.  If we wished, we could also have designated a
+single distinct bit pattern to encode all numbers that otherwise have
+no encoding, which would let us detect anomalous cases.  We will see
+an example of such an encoding in \cref{chap:floats}.
+
+Having an encoding of numbers is not terribly useful unless we can
+also perform \emph{operations}, such as arithmetic, on numbers
+represented in the given encoding.  However, before we can do that,
+we have to talk about Boolean logic.
 
 \section{Boolean Logic}
 \label{sec:boolean-logic}
@@ -174,8 +186,9 @@ and $F$ for falsity.  For example, \emph{logical-and}, written
 $p \land q$, is true if $p$ and $q$ are both true, and otherwise
 false, while \emph{logical-and}, written $p \lor q$, is true if either
 operand is true.  The \emph{exclusive-or} operation $p \lxor q$ is
-true if exactly one of $p$ and $q$ is true, and $\neg p$ is true only
-if $p$ is false.  This is shown in \cref{fig:truth-tables}.
+true if exactly one of $p$ and $q$ is true, and \emph{logical
+  negation} $\neg p$ is true only if $p$ is false.  This is shown in
+\cref{fig:truth-tables}.
 
 \begin{figure}
   \centering
@@ -366,7 +379,7 @@ natural numbers represented as a $w$-bit word.
   \bitvector{x_{w-1}\cdots{}x_{0}} \BitAdd \bitvector{y_{w-1}\cdots{}y_{0}} \defeq
   \bitvector{s_{w-1}\cdots{}s_{0}}
 \end{align*}
-where $s_{i},c_{i}$ are as in \cref{eqn:si,eqn:c0,eqn:si,eqn:ci}.
+where $s_{i},c_{i}$ are as in \cref{eqn:s0,eqn:c0,eqn:si,eqn:ci}.
 \label{def:intadd}
 \end{definition}
 
@@ -377,6 +390,7 @@ natural number it encodes via $\mathrm{Bits2N}$.  On the other hand,
 \emph{truncation} by removing bits can change the encoded value.
 
 \subsubsection{Overflow}
+\label{sec:overflow}
 
 Our definition of $\BitAdd$ accepts and produces $w$-bit words.  What
 happens if the resulting number is larger than $2^{w}-1$ and thus
@@ -385,7 +399,7 @@ logically requires more than $w$ bits to be represented?  Following
 part of the result---if this bit is $1$, then we say that the addition
 has \emph{overflowed}.
 
-\begin{definition}{Integer overflow}
+\begin{definition}[Integer overflow]
   When the result of an integer operation is so large that it does fit
   in the designated word.
 \end{definition}
@@ -468,6 +482,9 @@ $k$ leftmost bits and prepend $k$ zero bits.
 
 Interpreted as an unsigned number, right-shifting a bit vector by $k$
 is equivalent to dividing by $2^{k}$ and then rounding towards zero.
+In the C programming languages, shifting is provided with the
+operators \texttt{>>} and \texttt{<<}, although with an important
+quirk that we will discuss in \cref{sec:arithmetic-right-shift}.
 
 Closely related to shifting is \emph{rotation}, where bits are not
 discarded but merely moved to the other end of the word.  We will not
@@ -546,8 +563,8 @@ follows:
 \label{def:sm2int}
 \end{definition}
 
-Negating a number in sign-magnitude representation is quite simple:
-just flip the sign bit.
+Arithmetically Negating a number in sign-magnitude representation is
+quite simple: just negate the sign bit.
 
 \begin{table}
   \centering
@@ -653,8 +670,8 @@ Complement numbers does a computer need to inspect the sign bit.
 
 \subsubsection{Arithmetic Negation}
 
-Negation of Two's Complement numbers is done by flipping all the bits
-(a \emph{logical negation}) and then incrementing by one:
+Arithmetic negation of Two's Complement numbers is done by logically
+negating all the bits and then incrementing by one:
 
 \begin{definition}[Negating a Two's Complement number]
   \[
@@ -686,6 +703,7 @@ define subtraction of numbers in Two's Complement:
 \end{definition}
 
 \subsubsection{Arithmetic right shift}
+\label{sec:arithmetic-right-shift}
 
 In \cref{sec:bitshift} we saw how shifting by $k$ corresponds to
 multiplication and division by $2^{k}$.  But while left-shifting works
