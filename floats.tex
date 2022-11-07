@@ -577,6 +577,126 @@ difficult to use in a modular way.
 \section{Arithmetic}
 \label{sec:float-arithmetic}
 
+While a full discussion on implementing floating-point arithmetic is
+well outside the scope of this text, we are going to briefly discuss
+how multiplication and addition is implemented.  For clarity of
+exposition, we are going to assume that the operands are proper
+numbers expressed as
+\[
+  (-1)^{s} \cdot m \cdot 2^{e}.
+\]
+In particular, they are not infinities or NaN (but may be subnormal).
+In general, when an operation has a NaN operand, the result is also a
+NaN.  Infinities are produced by overflow, and most operations
+likewise preserve infinity, e.g:
+\begin{equation}
+  1 + \infty = \infty
+\end{equation}
+But some operations involving infinity may also produce NaN:
+\begin{equation}
+  \infty - \infty = \text{NaN}
+\end{equation}
+
+\begin{definition}{Floating-point overflow}
+  When the magnitude of a floating-point number becomes too large to
+  be representable and the result becomes $\pm\infty$.
+\end{definition}
+
+\begin{definition}{Floating-point underflow}
+  When the magnitude of a floating-point number becomes too small be
+  representable and the result becomes $0$.
+\end{definition}
+
+Note that overflow also occurs when a number becomes \emph{too
+  negative}.  This is in contrast to integers, where this situation is
+called \emph{integer underflow}.  With floating-point numbers,
+underflow means that the number comes too close to zero, and ends up
+being rounded to zero.
+
+\subsection{Multiplication}
+
+Due to the exponential representation, multiplication of
+floating-point numbers is actually simpler than addition.  The product
+of two floating-point numbers
+\[
+  (-1)^{s_{1}} \cdot m_{1} \cdot 2^{e_{1}}
+\]
+and
+\[
+  (-1)^{s_{2}} \cdot m_{2} \cdot 2^{e_{2}}
+\]
+is given by
+\begin{equation}
+  (-1)^{s_{3}} \cdot m_{3} \cdot 2^{e_{3}} = ((-1)^{s_{1}} \cdot m_{1} \cdot 2^{e_{1}}) \cdot ((-1)^{s_{2}} \cdot m_{2} \cdot 2^{e_{2}})
+\end{equation}
+  where
+  \begin{align}
+    s_{3} &= s_{1} \oplus s_{2} \\
+    m_{3} &= m_{1} \cdot m_{2} \\
+    e_{3} &= e_{1} + e_{2}
+  \end{align}
+
+  This might produce an un-normalised or unrepresentable number.  If
+  $m_{e}\geq{}2$, meaning that the number is not normalised, we shift
+  $m_{3}$ right (equivalent to repeatedly dividing by two) and
+  increment $e_{3}$ (equivalent to doubling).  Then, if $e_{3}$ is out
+  of range (either less than $e_{\text{min}}$ or greater than
+  $e_{\text{max}}$), the operation has overflowed, producing
+  $\pm\infty$.  Finally, we round $m_{3}$ to $p$ bits.  The addition
+  of the exponents is just integer addition, which is straightforward.
+  Implementing the multiplication of the significands is more
+  complicated, but fortunately outside the scope of this text.
+
+\subsection{Addition}
+
+Given two floating-point numbers
+\[
+  x_{1} = (-1)^{s_{1}} \cdot m_{1} \cdot 2^{e_{1}}
+\]
+and
+\[
+  x_{2} = (-1)^{s_{2}} \cdot m_{2} \cdot 2^{e_{2}}
+\]
+we seek to compute the sum
+\begin{equation}
+  ((-1)^{s_{3}} \cdot m_{3} \cdot 2^{e_{3}}) = x_{1} + x_{2}
+\end{equation}
+meaning we have to find $s_{3},m_{3},e_{3}$.
+
+First, assume without loss of generality that
+$e_{1} \geq e_{2}$\footnote{We can always just flip the operands to
+  the addition.}.  We rewrite $x_{2}$ such that its exponent becomes
+$e_{1}$, but without changing its numerical value by also constructing
+a new significand $m_{2}'$:
+\begin{equation}
+  x_{2}' = ((-1)^{s_{2}} \cdot m_{2}' \cdot 2^{e_{1}}
+\end{equation}
+Note that $x_{2}'$ is most likely not a normal representation, but
+this is fine, as it is merely an intermediate result.  Now we can compute
+\begin{align}
+  s_{3} &= s_{1} \oplus s_{2} \\
+  m_{3} &= m_{1} + m_{2}'
+\end{align}
+As with multiplication, this might not yield a normalised or
+representable number.  We fix it a similar way. If $m_{3}\geq{}2$, we
+shift $m_{3}$ right and increment $e_{3}$.  If $m_{3}<1$, we shift $m$
+left and decrement $e_{3}$.  If $e_{3}$ is outside the range
+$[e_{\text{min}},e_{\text{max}}]$, the result is $\pm\infty$.
+Otherwise, we round $m_{3}$ to $p$ bits.
+
+\begin{example}[Addition with $p=3$]
+  \[
+    \begin{array}{rlr}
+      & (-1.01 \cdot 2^{2}) + (1.1 \cdot 2^{4}) \\
+      =& (-1.01 \cdot 2^{2}) + (110.0 \cdot 2^{2}) & \text{Align exponents} \\
+      =& (-1.01+110.0) \cdot 2^{2} & \text{Distributivity} \\
+      =& 100.11 \cdot 2^{2} & \text{Add significands} \\
+      =& 1.0011 \cdot 2^{4} & \text{Normalise} \\
+      =& 1.01 \cdot 2^{4} & \text{Perform rounding} \\
+    \end{array}
+  \]
+\end{example}
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "notes"
