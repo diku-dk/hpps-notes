@@ -472,7 +472,7 @@ not write it down in that form.
       S=\bitvector{1} & E=\bitvector{11010} & T=\bitvector{0001010001}
     \end{array}
   \]
-  This means we are dealing with a normal number.  We now compute
+  Inspecing $E$ and $T$, we see we are dealing with a normal number.  We then compute
   \[
     \begin{array}{ccr}
       b &=& 15 \\
@@ -487,8 +487,95 @@ not write it down in that form.
   \]
 \end{example}
 
+\subsection{Interesting Properties}
+
+Working with floating-point numbers is a big topic, but there's a
+handful of simple properties that are useful to remember.
+
+All floating point numbers can be arithmetically negated (multiplied
+by negative one), simply by negating the sign bit.  This is in
+contrast to Two's Complement integers, where the most negative number
+cannot be negated.
+
+In all IEEE floating-point formats, the range of $e$ is symmetric
+around zero, e.g. \cref{tab:ieee-formats} shows that for binary32
+(``single precision''), $e$ ranges from $-126$ to $+127$.  When $e<0$,
+the magnitude of the represented number is less than $1$.  This means
+that approximately \emph{half} of all representable numbers are in the
+interval $[-1,1]$!  Therefore, while we can represent astronomically
+large numbers with a magnitude of more than $2^{127}$, only a
+relatively tiny portion of the encoding space is devoted to these, and
+any arithmetic in this end of the number line is likely going to be
+subject to severe rounding error.
+
 \section{Rounding}
 \label{sec:rounding}
+
+Most rational numbers have no representation as floating point
+numbers.  Therefore, in general the result of an arithmetic operation
+cannot be represented exactly in any floating point format, but has to
+be \emph{rounded} to the nearest representable value.  As an example,
+although both $1$ and $10$ can be represented, the division
+\[
+  \frac{1}{10}
+\]
+cannot be exactly represented in any binary floating point format, and
+instead has to be approximated.  In binary32, the closest
+approximation is
+\[
+  13421773 \cdot 2^{-27} = 0.10000000149011612.
+\]
+
+In the first floating-point systems, the way results were rounded was
+not always specified, and frequently varied among computers.  The IEEE
+754 standard mandates the concept of \emph{correct rounding}, where
+the result of a single operation is calculated with infinite
+precision, and then rounded to a representable value using one of
+several possible \emph{rounding modes}\footnote{The 2008 revision to
+  IEEE 754 changed the term to \emph{rounding direction attribute},
+  but \emph{rounding mode} is still in widest use by practitioners.}.
+
+\begin{definition}[Correct rounding]
+  When the computed result of an operation is the same as if the
+  operation was done with infinite precision and unlimited range, then
+  rounded according to the chosen rounding mode.
+\end{definition}
+
+Essentially, when an operation is correctly rounded, it means that the
+result is as close to being mathematically correct as we can represent
+within the floating-point format.  IEEE 754 guarantees correct
+rounding for addition, subtraction, multiplication, division, and
+square root, but not for the various transcendental functions:
+logarithms, sines, cosines, etc.  The exactness of these functions can
+vary between platforms.
+
+\subsection{Rounding modes}
+
+IEEE 754 specifies five rounding modes:
+
+\begin{itemize}
+\item Round towards $-\infty$, also called ``rounding downwards''.
+  When rounding a number $x$, this produces the largest representable
+  number smaller or equal to $x$.
+\item Round towards $\infty$, also called ``rounding upwards''.
+  When rounding a number $x$, this produces the smallest representable
+  number greater or equal to $x$.
+\item Round towards $0$, which rounds downwards when $x>0$ and
+  otherwise rounds upwards.
+\item Round to nearest, ties to even.  This rounds to the closest
+  representable number, picking the even number in case of ties.  This
+  is the default rounding mode in the vast majority of systems.
+\item Round to nearest, ties away from zero.  Picks the representable
+  number with the largest magnitude in case of ties.
+\end{itemize}
+
+In most cases we do not worry about rounding modes when programming.
+The default behaves sensibly in most cases, and changing the rounding
+mode is usually a global change for the entire process, which makes it
+difficult to use in a modular way.
+
+\section{Arithmetic}
+\label{sec:float-arithmetic}
 
 %%% Local Variables:
 %%% mode: latex
