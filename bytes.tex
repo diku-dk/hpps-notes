@@ -1,11 +1,353 @@
 \chapter{Data as Bytes}
 \label{chap:bytes}
 
+In the previous chapters we looked at data represented as bits.  While
+fiddling with bits is indeed how computation is ultimately carried out
+in a physical sense, computers are built as layers of aggregation and
+abstraction.  We already saw how individual bits were assembled into
+bit vectors, and how bit vectors of known lengths can be used to
+represent data types such as numbers.  In principle, we could imagine
+a computer that simply treated the totality of available data as a
+single large bit vector.  In practice, the smallest storable unit of
+data is a bit vector called a \emph{byte}, which is stored in
+\emph{memory}, and which is the subject of this chapter.
+
+The size of a used to vary between computers, and tended to be the
+amount of bits necessary to represent a single character.  Many older
+computers used 6-bit bytes, as $2^{6}=64$ allows enough distinct
+values to represent the alphabet, ten digits, and some punctuation
+characters\footnote{We will return to the issue of text representation
+  in \cref{sec:text}}.  However, essentially all modern computers use
+8-bit bytes.  In fact, ``byte'' has become more or less synonymous
+with ``8 bits'', although a pedant would insist that the proper term
+for such a bit vector is \emph{octet}.  For simplicity, we will use
+``byte'' in this text.
+
+As we saw earlier, many data types are represented in more than 8
+bits.  To represent such data, we need multiple bytes.  Because the
+byte unit is the unit of storage, all common data types are a multiple
+of 8 bits, meaning one or more whole bytes.  Working with data that is
+not expressible as a whole number of bytes is possible, but is more of
+a chore.
+
+When discussing values at the byte level, hexadecimal (base-16)
+notation is often used, where the letters $a$--$f$ (or their uppercase
+equivalents) are used to denote digits with values $10$--$15$.
+Hexadecimal notation is convenient because the 16 different digits for
+a single hexadecimal digit corresponds exactly to 4 bits, and a single
+8-bit byte can thus be written using exactly two hexadecimal digits.
+\begin{equation}
+  149_{10} = 10010101_{2} = 95_{16}
+\end{equation}
+It is usually easier to read a hexadecimal number than a long binary
+number. Also, it is easy to translate hexadecimal numbers to binary,
+because we can translate each digit separately and simply concatenate
+at the end.
+
 \section{Memory}
 \label{sec:memory}
 
-\section{Byte Ordering}
+The main working storage of a computer is called the \emph{memory}.
+Conceptually, the memory can be seen as a large contiguous array of
+bytes.  Given an index, called an \emph{address}, we can retrieve or
+modify the byte stored at that address.  \Cref{fig:memory} shows this
+conceptual model.  This kind of memory is called \emph{random access
+  memory} (or RAM) because we can at any time access the data at any
+address.  When a program is running, its data (values of variables and
+objects) is stored in memory.
+
+\begin{figure}
+  \centering
+  \begin{tabular}{l|c|c|c|c|c|c|c|c|c|c|c|c|r}
+    \multicolumn{1}{l}{$00\cdots{}0_{16}$}
+    &\multicolumn{12}{c}{}
+    &\multicolumn{1}{l}{$FF\cdots{}F_{16}$} \\
+    \cline{2-13} &&&&&&$\cdots$&&&&&&& \\\cline{2-13}
+  \end{tabular}
+  \caption{Memory is an array of bytes, indexed from $0$ to some
+    largest address, depending on the size of the memory.  Addresses
+    are typically written with hexadecimal (base-16) numbers.}
+  \label{fig:memory}
+\end{figure}
+
+Physically, memory is usually implemented using \emph{dynamic RAM}
+(DRAM) technology, although other technologies have been used in the
+past.  DRAM needs to be constantly refreshed, requiring power, or it
+will lose data.  This means that data stored in DRAM will be lost when
+the computer is turned off.  Data that we intend to keep must be
+written to persistent storage, which today typically takes the form of
+a hard disk drive (HDD) or solid state drive (SSD), although many
+other technologies exist.  These storage technologies are not
+typically considered part of ``memory'', but are made available
+through \emph{file systems}, although the line is somewhat blurred by
+the notion of \emph{virtual memory} where data is transparently moved
+between different physical storage media (outside the scope of this
+chapter).
+
+In principle, to perform a computation such as addition, the processor
+must fetch the operands from memory, perform the operation as
+described in previous chapters, and write the result back to memory.
+In practice, processors contain a fixed set of \emph{registers} that
+we can view as a small collection of fixed-size variables.  The
+processor operates on data stored in registers, and copies explicitly
+between registers and memory as needed.  As programmers we can usually
+ignore this distinction---it is dealt with by the implementation of
+the programming language we are using.  We will return to this in
+\cref{chap:compiled-interpreted}.
+
+\section{Multi-byte Words}
+
+When we store a multi-byte object in memory, such as a 64-bit
+floating-point number, we identify it with the address of its
+\emph{first} constituent byte, counting from low addresses to high
+addresses.  As always, data is not self-describing, so it is in
+principle our responsibility to remember the number of constituent
+bytes.  For simple data types, the size is known.  For example, in C
+on a modern x86-64 machine, the \texttt{char} type is always 1 byte, a
+\texttt{short} is 2 bytes, and an \texttt{int} is 4 bytes.  We will
+discuss variable-size data types in \cref{sec:text} and
+\cref{chap:datalayout}.
+
+\subsection{Byte Ordering}
 \label{sec:endianness}
+
+When storing a multi-byte object (say, a 4-byte \texttt{int}) in
+memory, each individual byte will have an address.  This means that
+the \emph{byte order} is visible at the memory level, and hence that
+the order in which we store the bytes matter.  This is called
+\emph{endianness}, a term taken from \emph{Gulliver's Travels} where
+the Lilliputians fight a civil war over whether the shell of a boiled
+egg should be broken from the big or little end.
+
+In computer science, there are two main endianness conventions:
+\begin{definition}[Big Endian]
+  The most significant byte is stored at the lowest address.
+\end{definition}
+\begin{definition}[Little Endian]
+  The least significant byte is stored at the lowest address.
+\end{definition}
+
+\begin{example}[Representing $x=01234567_{16}$ in memory]
+  With big-endian, the byte order would be $01~23~45~67$, while with
+  little-endian the order would be $67~45~23~01$.  If $x$ is stored
+  starting at address $p$, then address $p$ would contain the byte
+  $01$ or $67$ if $x$ is stored in respectively big-endian
+  and little-endian order.
+\end{example}
+
+Note that byte ordering does not affect the ordering of digits (or
+bits) \emph{within} each byte.  This is because individual bits do not
+have addresses; only bytes do.
+
+While big-endian used to be dominant, most current machines use
+little-endian byte order.  This can be confusing when inspecting raw
+memory contents, as the convention in mathematical notation is
+big-endian.  Fortunately, byte order is unimportant in most
+programming tasks: it is handled by the programming language
+implementation.  We can only observe the byte order when we explicitly
+decompose values into their constituent bytes.  Bit-shifting integers
+and similar always works as expected.
+
+\subsection{Addresses and pointers}
+
+The addresses used to index memory are unsigned numbers of a fixed
+size that depends on the computer architecture.  32-bit addresses used
+to be common, but most mainstream computers now use 64-bit addresses.
+The size of the address is independent of how much memory is actually
+physically installed in the computer---with 64 bits we can address a
+memory comprising $2^{64}$ bytes, which is \emph{far} larger than any
+current or planned computer.\footnote{As of this writing, the largest
+  supercomputer in the world is the Japanese Fukagu, which contains
+  approximately $2^{52}$ bytes of memory in total, although this is
+  spread across 158976 distinct physical memories.}
+
+As a model, we can imagine that addresses beyond the physical capacity
+of the computer result in an error.  For example, in a computer with
+$2^{30}B=1GiB$ of memory, addresses of $2^{30}$ and above would be
+invalid.  The consequences of accessing an invalid address varies
+depending on the machines, but in most cases the program will be
+terminated---under Unix-like operating systems, this is called a
+\emph{segmentation fault}.  You will see lots of these in your own C
+programs.
+
+To the computer, an address is merely an unsigned number, and
+programming directly with them is notoriously error-prone.  Most
+languages do not expose addresses at all, and even those that do tend
+to give them a distinct type to avoid mistakes.  In C, we can use the
+\texttt{\&} prefix operator to take the address of a variable
+\texttt{x}, as follows:
+\begin{center}
+  \texttt{\&x}
+\end{center}
+If \texttt{x} has type \texttt{T}, then \texttt{\&x} has type
+\texttt{T*}, read as ``pointer to \texttt{T}''.  In C, a variable that
+contains an address is called a \emph{pointer}.  We can
+\emph{dereference} a pointer by using the prefix operator \texttt{*}.
+This means taking the value of the pointer (which is an address) and
+retrieving the value at that address.  For example, if \texttt{px} has
+type \texttt{T*}, the expression \texttt{*px} has type \texttt{T}.  Be
+careful not to confuse the use of \texttt{*} in \emph{types} (where it
+\emph{adds} a layer of indirection) with the use of \texttt{*} in
+\emph{expressions} (where it \emph{removes} a layer of indirection).
+Pointers are an inherently difficult topic, but flaws in C's syntax
+makes it no easier.
+
+If you print the addresses used for variables in your own programs,
+you will see that many have values that far exceed the amount of
+physical memory in your computer.  This is due to virtual memory,
+which we will return to later, but means there is a decoupling between
+the addresses seen by software and the actual physical addresses used
+by hardware.  As a model, we can see program memory not as an array
+with contiguous valid addresses, but instead as an array with ``gaps''
+of invalid addresses.
+
+\section{Text and Characters}
+\label{sec:text}
+
+Computers understand only bits, aggregated into bytes.  These are
+stored as voltage differences inside electronic circuitry.  In order
+for a computer to be useful, this data must be made comprehensible to
+a human.
+
+This usually happens through an \emph{input-output} (IO) device.
+Imagine an electronic typewriter that receives bytes over a wire.
+Upon receiving a byte, it consults a table called a table that maps
+each of the $256$ possible bytes to a character, and then prints the
+corresponding character on a piece of paper.  This was exactly how
+early \emph{teletypes} worked, and the idea of associating numbers
+with characters, which are then printed or shown as appropriate, is
+still relevant.  Today, it is unlikely that you interact with your
+computer through a teletype, and instead the bytes are passed through
+multiple layers of hardware and software until your monitor ultimately
+illuminates multiple tiny LEDs to form the desired shape on the
+screen.
+
+\begin{definition}[Character set]
+  A mapping from integers to characters.
+\end{definition}
+
+Many character sets used to proliferate, but \emph{ASCII} eventually
+became dominant.  ASCII, shown on \cref{tab:ascii} defines only $127$
+characters, leaving the 8th bit free.  Originally this 8th bit was
+used to perform error correction when data was transmitted across
+noisy telephone lanes, but later it was used to extend the ASCII-table
+with language-specific variants.  For example, the ISO-8859-1
+character set added support for most Western European characters.
+Countries that did not use the Latin alphabet (such as Russia, China,
+or Japan) defined their own non-ASCII character sets.  As always, data
+was not self-describing, so in order to interpret a byte sequence as
+text, you had to know which character set was used to encode it.
+
+Eventually, the Unicode standard was established, which was conceived
+as a single character set that could encompass \emph{all} the worlds
+languages.  In ASCII and its variants, each byte corresponds to a
+single character, but this is insufficient for Unicode, which as of
+this writing defines 149,186 characters\footnote{For a very wide
+  definition of ``character''---everything from hieroglyphs,
+  right-to-left indications, combining accents, and emoji are part of
+  Unicode.}.  While Unicode is still rooted in the idea of mapping
+numbers to characters, it provides multiple ways of encoding each
+number as (usually multiple) bytes.  The most common encoding, called
+UTF-8, is a variable-width encoding where the number of bytes per
+character depends on the character being encoded.  However, for the
+subset of Unicode corresponding to ASCII, UTF-8 has the property that
+any ASCII text is also valid UTF-8, and encodes the same characters.
+For simplicity, we will stick to ASCII in the following.
+
+\begin{table}
+  \centering
+   \tiny\ttfamily
+  \begin{tabular}{|cc|cc||cc|cc|cc|cc|cc|cc|}
+    \multicolumn{4}{l}{\textsf{\textbf{Control characters}}} & \multicolumn{12}{l}{\textsf{\textbf{Normal characters}}} \\
+    \hline
+    000 & nul & 016 & dle & 032 &  \textvisiblespace & 048 & 0 & 064 & @ & 080 & P       & 096 & \textquoteleft& 112 & p        \\
+    001 & soh & 017 & dc1 & 033 &  !                 & 049 & 1 & 065 & A & 081 & Q       & 097 & a             & 113 & q        \\
+    002 & stx & 018 & dc2 & 034 &  ``                & 050 & 2 & 066 & B & 082 & R       & 098 & b             & 114 & r        \\
+    003 & etx & 019 & dc3 & 035 &  \#                & 051 & 3 & 067 & C & 083 & S       & 099 & c             & 115 & s        \\
+    004 & eot & 020 & dc4 & 036 &  \$                & 052 & 4 & 068 & D & 084 & T       & 100 & d             & 116 & t        \\
+    005 & enq & 021 & nak & 037 &  \%                & 053 & 5 & 069 & E & 085 & U       & 101 & e             & 117 & u        \\
+    006 & ack & 022 & syn & 038 &  \&                & 054 & 6 & 070 & F & 086 & V       & 102 & f             & 118 & v        \\
+    007 & bel & 023 & etb & 039 &  \textquotesingle  & 055 & 7 & 071 & G & 087 & W       & 103 & g             & 119 & w        \\
+    008 & bs  & 024 & can & 040 &   (                & 056 & 8 & 072 & H & 088 & X       & 104 & h             & 120 & x        \\
+   009 & tab & 025 & em  & 041 &    )                & 057 & 9 & 073 & I & 089 & Y        & 105 & i             & 121 & y       \\
+   010 & lf  & 026 & eof & 042 &  *                 & 058 & : & 074 & J & 090 & Z        & 106 & j             & 122 & z       \\
+   011 & vt  & 027 & esc & 043 &  +                 & 059 & ; & 075 & K & 091 & [        & 107 & k             & 123 & \char`\{\\
+   012 & np  & 028 & fs  & 044 &  \textquoteright   & 060 & < & 076 & L & 092 & \char`   & 108 & l             & 124 & |       \\
+   013 & cr  & 029 & gs  & 045 &  -                 & 061 & = & 077 & M & 093 & ]        & 109 & m             & 125 & \char`\}\\
+   014 & so  & 030 & rs  & 046 &  .                 & 062 & > & 078 & N & 094 & \^{}     & 110 & n             & 126 & \~{}    \\
+   015 & si  & 031 & us  & 047 &  /                 & 063 & ? & 079 & O & 095 & \char`\_ & 111 & o             & 127 & del   \\
+    \hline
+      \end{tabular}
+      \caption{The ASCII table, mapping decimal numbers to the
+        corresponding character.  Note that not all of these
+        characters are intended for humans---some are control
+        characters for operating the teletype or otherwise controlling
+        the communication link.  While some of these are still used,
+        mainly the ones corresponding to whitespace, most are rarely
+        seen today.}
+  \label{tab:ascii}
+\end{table}
+
+\subsection{Numbers and Text}
+
+When we want to print a number, we have to produce a byte sequence
+corresponding to an encoding of the digits.  For example, the number
+\[
+  1234_{10} = 04d2_{16}
+\]
+might be stored like this in memory, using decimal notation, 2 bytes,
+and little-endian representation:
+\[
+  \begin{array}{|c|c|}
+    \hline 210 & 4 \\\hline
+  \end{array}
+\]
+We cannot merely submit these two bytes to the teletype.  The number
+$210$ does not correspond to any ASCII character at all, and $4$
+corresponds to the control character \texttt{eot} (for ``end of
+transmission'').  Instead, we must convert it to the byte
+string
+\[
+  \begin{array}{|c|c|c|c|}
+    \hline 49 & 50 & 51 & 52 \\\hline
+  \end{array}
+\]
+which we can then submit to the teletype or write to a text file.
+Note that the number $49$ encodes the ASCII digit \texttt{1}, $50$
+encodes \texttt{2}, etc.  It is an easy mistake to conflate the number
+in memory with the (in principle arbitrary) number that identifies a
+\emph{digit character} in the ASCII table.  Note also that endianness
+business does not matter for human-readable text.  The order in which
+the characters appear in memory (or the order in which they are
+submitted to the IO device) are also the order in which they will
+appear to a human.\footnote{There are character encodings that
+  represent each characters using a fixed number of bytes, such as
+  UTF-32 which uses four bytes per character.  These are subject to
+  byte ordering issues \emph{within} each character.  Text using this
+  encoding is usually preceded by a \emph{byte order mark} indicating
+  the endianess used.  This is not a problem for UTF-8.  If you make
+  correct choices in life, you will never have to worry about this.}
+
+\subsection{Strings in C}
+
+A sequence of characters is colloquially called a \emph{string} in
+most programming languages, and is typically one of the most central
+types.  Unfortunately, C has no built-in string type.  Instead C
+represents strings with the type \texttt{char*}, representing the
+address of the first character in the string, and indicates the end of
+the string with a single byte with the value $0$.
+
+This representation, called zero-termination, is recognised as one of
+the greatest design mistakes in computer science and has been the
+cause of countless security holes.  The reason is that it is awfully
+easy to forget to add the trailing $0$ byte when constructing a
+string.  When later code then attempts to work on the string, it will
+go past the intended end and into arbitrary memory, until a $0$ byte
+happens to be encountered by happenstance.
+
+Most other languages employ a representation where a string is stored
+alongside an integer containing the size of the string.  This is much
+less error-prone.
 
 %%% Local Variables:
 %%% mode: latex
