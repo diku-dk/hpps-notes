@@ -129,8 +129,8 @@ and is defined by the following recursive procedure.
     \mathrm{N2Bits}_{1}(1) \defeq & \bitvector{1} \\
     \mathrm{N2Bits}_{w}(x) \defeq &
                                     \begin{cases}
-                                      \bitvector{\mathrm{N2Bits}_{w-1}(\lfloor\frac{x}{2}\rfloor)}\bitvector{0} & \text{$x$ is even} \\
-                                      \bitvector{\mathrm{N2Bits}_{w-1}(\lfloor\frac{x}{2}\rfloor)}\bitvector{1} & \text{$x$ is odd}
+                                      \bitvector{\mathrm{N2Bits}_{w-1}(\lfloor\frac{x}{2}\rfloor)}\bitvector{0} & \textrm{$x$ is even} \\
+                                      \bitvector{\mathrm{N2Bits}_{w-1}(\lfloor\frac{x}{2}\rfloor)}\bitvector{1} & \textrm{$x$ is odd}
                                     \end{cases}
   \end{align}
   \label{def:n2bits}
