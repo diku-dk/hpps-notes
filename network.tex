@@ -1,14 +1,19 @@
 \chapter{Networks}
 \label{chap:network}
 
-Although there are many kinds of computer networks created, the vast majority of network equipment is based on the TCP/IP stack, which we will cover in these notes. The course book covers networks from a programmer’s perspective, inspecting details on how to use the C programming language to implement network applications.
-
-In most (scientific) applications this is far too low-level. The course notes focus instead on explaining how the network is implemented and the properties that arise from the implementation. The focus is on explaining the properties that are most likely to impact scientific applications.
+Although there are many kinds of computer networks created, the vast majority of network equipment is based on the TCP/IP stack, which we will cover in these notes. These course notes focus on explaining how the network is implemented and the properties that arise from the implementation. Some reference material for network programming is included at the end of the chapter, but the exercises are intended as the main way to learn this.
 
 \section{OSI layers}
-The OSI layers are a model that explains the implementation of the internet. Each of the layers in the OSI model relies on the previous layer and makes certain assumptions about it. Using the services provided by the underlying layer, each layer can add new services.
+The OSI layers are a model that explains the implementation of the internet. Each of the layers in the OSI model relies on the previous layer and makes certain assumptions about it. Using the services provided by the underlying layer, each layer can add new services. There are several different versions of the OSI model, with differing numbers of layers and various names for those layers. For this course we will only consider the commonly used 5 layer model shown below. Just make sure to remember that different representations do exist.
 
-The OSI model is intended to describe many kinds of networks, but in the text here we map the concepts to the implementation on global internet and consider this the only implementation.
+\begin{figure}
+  \includegraphics[width=0.5\textwidth]{img/osi.pdf}
+  \centering
+  \caption{The 5 layer OSI model}
+  \label{fig:osi}
+\end{figure}
+
+By using a layered model we can seperate out functionality, to aid modelling, but also product design and deployment. By letting individual components (software or hardware) only need to meet the requirements of an individual layer, then companies or developers can more easilly create small components that can be of use to the wider network. This has greatly aided the very fast deployment of a global network of devices, which would not be possible if each user needed to implement an entire end to end system. The OSI model is intended to describe many kinds of networks, but in the text here we map the concepts to the implementation on global internet and consider this the only implementation. 
 
 \section{Physical layer}
 The physical layer is the lowest layer in the OSI model and is concerned with transmission of bits via various propagation media. The first networks were implemented as wired networks, propagating electrical signals through a shared copper wire. Modern implementations use radio signals, to implement services such as Wi-Fi and 3/4/5G. 
@@ -76,15 +81,17 @@ For an overview of the layers until now, and the different components that conne
 With a network layer that is capable of transmitting a package from one host to another, the transport layer provides one protocol for doing just that: User Datagram Protocol, UDP.
 
 \subsection{Adding ports}
-A datagram in UDP adds only a single feature to the service provided by the network layer: ports. To allow multiple processes on a given host to use the network, UDP adds a 16-bit port number. When describing and address on the transport layer, the port number is often added to the IP address or hostname after a colon: \texttt{192.168.0.1:456}. The operating system kernel will use the IP address and port number to deliver packages to a particular process. However, since UDP uses the network layer, there is no acknowledgement of receipt and no signals if a package is lost. Because the routers update dynamically, it is also possible for packages to reach the destination via different routes, causing packages to arrive in a different order than they were sent.
+A datagram in UDP adds only a single feature to the service provided by the network layer: ports. To allow multiple processes on a given host to use the network, UDP adds a 16-bit port number. When describing and address on the transport layer, the port number is often added to the IP address or hostname after a colon: \texttt{192.168.0.1:456}. The operating system kernel will use the IP address and port number to deliver packages to a particular process (More on this below). However, since UDP uses the network layer, there is no acknowledgement of receipt and no signals if a package is lost. Because the routers update dynamically, it is also possible for packages to reach the destination via different routes, causing packages to arrive in a different order than they were sent.
 
 UDP can be acceptable for some cases, for instance game updates or video streams, where we would rather loose a frame than have a stuttering video. But for many other cases, such as transferring a file or dataset, the UDP service is not useful.
 
+Note that port numbers can be anything up to ~65000, but that it is common practice to avoid 0-2000ish as these are reserved for 'well-known' services. For example, most websites are hosted on port 80, and to keep functionality clear we politely avoid using 80 for non-website applications.
+
 \subsection{Transmission control protocol: TCP}
-The Transmission Control Protocol, TCP, is the most widely used protocol and most often used with IP to form TCP/IP. The TCP protocol builds a reliable transfer stream on top of a the unreliable delivery provided by the network layer. The protocol itself is very robust, with understandable mechanics, but can require some trials to accept that it works in all cases.
+The Transmission Control Protocol, TCP, is the most widely used protocol and most often used with IP to form TCP/IP. The TCP protocol builds a reliable transfer stream on top of an unreliable delivery provided by the network layer. The protocol itself is very robust, with understandable mechanics, but can require some trials to accept that it works in all cases.
 
 \subsection{Establishing a connection}
-Since the network layer does not tell us if a package has been delivered, the TCP protocol uses \emph{acknowledgements}, ACKs, to report receipt of a package. Before a connection is establish, the client sends a special SYN message, and awaits an ACK, and sends an ACK. This exchange happens before any actual data is transmitted but allows for "piggy backing" data on the last ACK message. When designing an application, it is important to know that this adds an overhead for each established connection, and thus connections should preferably be reused.
+Since the network layer does not tell us if a package has been delivered, the TCP protocol uses \emph{acknowledgements}, ACKs, to report receipt of a package. Before a connection is establish, the client sends a special SYN message, and awaits an ACK, and sends an ACK. This exchange happens before any actual data is transmitted but allows for "piggy backing" data on the last ACK message. When designing an application, it is important to know that this adds an overhead for each established connection, and thus connections should preferably be reused where possible. 
 
 \subsection{A simple stop-and-go TCP-like protocol}
 Once the connection is established, data can flow, but due to the network layers unreliability, we can receive packages out-of-order or lose them. For a simple protocol, we can just drop out-of-order packages, treating them as lost. The remaining problem has two cases: loss of package and loss of ACK. Since the sender cannot know which of these has occurred, it assumes the data is lost, and re-transmits it after a timeout has occurred while waiting for an ACK. If we prematurely hit a timeout, we will re-send a received package, but this is the same case as a lost ACK will produce.
@@ -95,23 +102,23 @@ The recipient can simply discard a package it has already received, so if we add
 However, due to the communication delay, we are waiting some of the time, instead of communicating. For even moderate communication delays, this results in poor utilization. To work around this, the TCP protocol allows multiple packages to be "in-flight", so the communication can occur with full bandwidth. This requires that the sender needs to keep track of which packages have gotten an ACK and which are still pending. We also need to keep copies of multiple packages, such that we can retransmit them if required. This does not change the way the simple stop-n-go protocol works, it simply adds a counter on the sender side. The choice of "how many" is done with a ramp-up process, increasing until no improvements are seen, which further adds to the delay of new connections.
 
 \subsection{Minimizing retransmission}
-We could stop there, and be happy that it works, but if we get packages out-of-order it means not being able to send the ACK, and many in-flight packages needs to be retransmitted. This is solved in TCP by keeping a receive buffer, allowing packages to arrive in out-of-order. This does not change the protocol, except that the recipient needs to send an ACK, only when there are no "holes" in the sequence of received packages. This is simplified a bit in TCP, where an ACK is interpreted as vouching for all data up until the sequence number. This means that lost ACK messages are usually not causing disturbance, as a new one arrives shortly afterwards. But it also makes it easier for the recipient to just send an ACK for the full no-holes sequence.
+We could stop there, and be happy that it works, but if we get packages out-of-order it means not being able to send the ACK, and many in-flight packages needs to be retransmitted. This is solved in TCP by keeping a receive buffer, allowing packages to arrive in out-of-order. This does not change the protocol, except that the recipient needs to send an ACK, only when there are no "holes" in the sequence of received packages. This is simplified a bit in TCP, where an ACK is interpreted as vouching for all data up until the sequence number. This means that when as the sender we recieve an acknowledgetment for packet 500, we know that all packets up to 500 have also been recieved. This means that lost ACK messages are usually not causing disturbance, as a new one arrives shortly afterwards. But it also makes it easier for the recipient to just send an ACK for the full no-holes sequence.
 
-If we lose a package, the recipient will notice that it keeps getting packages with higher sequence numbers. Since it can only ACK the last one, it will keep doing so. The sender can then notice getting multiple ACKs (specifically: 3) for the same package, and guess that it needs to re-transmit the next package. This improvement makes it possible to transmit at full speed even with some package loss.
+If we lose a package, the recipient will notice that it keeps getting packages with the same sequence number. Since the reciever can only ACK the last packet it has recieved, it will keep doing so. The sender can then notice getting multiple ACKs (specifically: 3) for the same package, and guess that it needs to re-transmit the next package. This improvement makes it possible to transmit at full speed even with some package loss, and without having to eait for time-consuming timeouts.
 
 Hopefully you can convince yourself that the protocol works correctly in all cases, despite the performance enhancements.
 
 \subsection{Flow control}
-When designing and evaluating network performance, it is important to know the two complementary mechanisms that both end up throttling the sending of packages. The original throttling mechanism is called flow-control and works by having the recipient include the size of the receive buffer with each ACK message. The sender can monitor this value and reduce the sending rate if it notices that the remaining space is decreasing. Once the space is zero, the sender will wait for a timeout or an ACK with a non-zero receive buffer size. The timeout is a protection against the case where the ACK is lost.
+When designing and evaluating network performance, it is important to know the two complementary mechanisms that both end up throttling the sending of packages. The original throttling mechanism is called flow-control and works by having the recipient include the size of the receive buffer with each ACK message. The sender can monitor this value and reduce the sending rate if it notices that the remaining space is decreasing. This is essentially trying to prevent the sender sending packets that there is not space to recieve, preventing packet loss and package re-transmission. Once the space in the reciever is zero, the sender will wait for a timeout or an ACK with a non-zero receive buffer size. The timeout is a protection against the case where the ACK is lost. 
 
 \subsection{Congestion control}
 The other mechanism is congestion control, which is a built-in protection against overflowing the network itself. While any one machine cannot hope to overflow the core routers in the network, many hosts working together can. What happened in the early days of the internet was that some routers were overwhelmed and started dropping packages. The hosts were using TCP and responded by retransmitting the lost packages, causing a build-up of lost packages, to the point where no connection was working. The TCP protocols are implemented in software, so the TCP implementations were gradually updated with congestion control additions. Unlike flow-control, there is no simple way of reporting the current load of all routers in the path. Instead, congestion control monitors the responses from the client, and makes a guess of the network state. Various implementations use different metrics, where the loss of packages was once seen as the right indicator. However, since package loss occurs \emph{after} the congestion issues have started, this was later changed to measure the time between ACK messages. Once the routers start to get overloaded, the response time increases, and modern TCP implementations use this to throttle the sending speed.
 
 \subsection{Closing a connection}
-The layers on top of TCP can assume that packages have arrived and are delivered in-order. But how do we know if we have received all packages, and not lost the last one? The TCP implementation handles this by sending a package with the FIN bit set. Like other packages, the FIN package can be lost, so we need to get an ACK as well. Again, the ACK package may be lost, so we need another package, and so on. TCP has a pragmatic solution, where the side that wishes to close the connection will send FIN, wait for an ACK and then send a final ACK. The final ACK \emph{may} be lost, in which case the recipient does not know if the sender has received the ACK. If this happens, TCP will keep the connection in a "linger" state for a period before using a timeout and closing the connection. Even if this happens, both sides can be certain that all messages have been echanged.
+The layers on top of TCP can assume that packages have arrived and are delivered in-order. But how do we know if we have received all packages, and not lost the last one? The TCP implementation handles this by sending a package with the FIN bit set. Like other packages, the FIN package can be lost, so we need to get an ACK as well. Again, the ACK package may be lost, so we need another package, and so on. TCP has a pragmatic solution, where the side that wishes to close the connection will send FIN, wait for an ACK and then send a final ACK. The final ACK \emph{may} be lost, in which case the recipient does not know if the sender has received the ACK. If this happens, TCP will keep the connection in a "linger" state for a period before using a timeout and closing the connection. Even if this happens, both sides can be certain that all messages have been exchanged.
 
 \subsection{Network Address Translation}
-In the original vision of the internet, all hosts were publicly addressable with their own IP address. Later that turned out to be a bad idea for security reasons, and for economic reasons. Each ISP has to purchase ranges of IP addresses and assign these to their customers. But some customers may have several devices, increasing the cost. Likewise, some customers and companies may like to have an internal network with printers and servers which is not exposed to the internet, but at the same time be able to access the internet.
+In the original vision of the internet, all hosts were publicly addressable with their own IP address. Later that turned out to be a bad idea for security and economic reasons. Each ISP has to purchase ranges of IP addresses and assign these to their customers. But some customers may have several devices, increasing the cost. Likewise, some customers and companies may like to have an internal network with printers and servers which is not exposed to the internet, but at the same time be able to access the internet.
 
 The technique that was employed rely on the router being a computer itself, with an internal and external IP address. When a host sends a package destined for the external network, the router will pick a random unused port number and forward the package, using the routers external IP address and the randomly chosen port. This information is stored in a table inside the router, such that when a response package arrives that is destined for the particular port and external IP, the router will forward it to the internal network, using the original IP and port. 
 
@@ -153,3 +160,53 @@ The domain name server is the final step, containing all information related to 
 Apart from the IP addresses for hosts, the DNS records contain email servers, known as \texttt{MX} records, free text, called \texttt{TXT} records, and other domain related information.
 
 To keep the load on DNS servers down, each host in the DNS system will cache the values it receives for a period. The exact period is also stored in the DNS records with a time-to-live, \texttt{TTL}, value expressed in seconds.
+
+\section{Network Programming}
+These brief notes will only look into using Python for network programming. All network programming is done via sockets, which act as file descriptors we can read and write to/from. A socket will map to a port via the \texttt{bind} function. From here we can either use it to listen for incoming messages via the \texttt{listen} function, or attempt to establish a new connection to another port. Note that the \texttt{connect} function includes the bind function within it so we don't need to call it explictly. An example is shown below. This creates a socket, connects to some other host using an IP and port number, assembles a message, and sends that message.
+
+\begin{lstlisting}
+import socket
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) \
+    as client_socket:
+  client_socket.connect(("127.0.0.1", 12345))
+  request = bytearray("message".encode())
+  client_socket.sendall(request)
+\end{lstlisting}
+
+Receiving a message can also be done through sockets. This example creates a socket at a given IP and port, listens for inbound communications, accepts those connections, reads the request and replies.
+
+\begin{lstlisting}
+import socket
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) \
+    as server_socket:
+  server_socket.bind(("127.0.0.1", 23456))
+  server_socket.listen()
+
+  while True:
+    connection, connection_address = server_socket.accept()
+    with connection:
+      message = connection.recv(1024)
+      connection.sendall(response)
+\end{lstlisting}
+
+Though individual socket programming may be usefull at some points, especially for sending messages. Servers are usually implemented through the socketserver class as shown below. In this model, dedicated handlers for requests are created so that responses can be processed concurrently. This concurrency is automatically handled by the \texttt{ThreadingTCPServer} class, which wil create a new thread for each inbound communication.
+
+\begin{lstlisting}
+from socketserver import ThreadingTCPServer, \
+	StreamRequestHandler
+
+class MyHandler(StreamRequestHandler):
+	def handle(self) -> None:
+		message = self.request.recv(1024)
+		self.request.sendall(message)
+
+with ThreadingTCPServer(("127.0.0.1", 5678), MyHandler) \
+		as my_server:
+	my_server.serve_forever()
+\end{lstlisting}
+
+Recall that regardless of the method used to program the sockets, all communication should be conducted via a client-server model. Under this model a communication is initiated by the client, aka the sender. It will attempt to contact a server, or reciever. Depending on the protocol, the server may respond or not. It is common that a response is always expected, such as in most TCP communications. Even if a nonsense message is sent by the client, the server will respond with an error message. Under the client/server model, if a response is expected, the client must commit to being able to recieve a reply, and the server must commit to sending a reply in a finite amount of time. This ensures the system won't livelock, where the communication hangs without completing. Note that hosts can act as both clients and servers at the same time, e.g., by recieving a request which requires some network communication to respond to. This is fine, but within each communication, one host will always be the client, and one will be the server.
+
+A server will create a socket to listen for new connections as shown above. This will be on a defined port, however, this is not the port that the connection will actually be established on. If this were, then the connection would reserve that port and no other clients could connect. Therefore, when a server recieves a new connection request, it will use the \texttt{accept} function to create and bind a new socket for the inbound communication. This makes servers capable of responding to multple connections, though the handling will have to be threaded in order be responded to concurrently. This will be investigated further in the following Chapter, though as already noted, the concurrency is automatically handled in the socketserver implementation.
