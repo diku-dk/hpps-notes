@@ -230,8 +230,8 @@ say a number is \emph{normalised}.
   \[
     x = -123 \times 10^{-1}
   \]
-  is not normalised, but we can normalise it by dividing the mantissa
-  by $10$ and incrementing the mantissa by $1$, giving
+  is not normalised, but we can normalise it by dividing the significand
+  by $10$ and incrementing the exponent by $1$, giving
   \[
     x -1.23 \times 10^{1}.
   \]
@@ -269,7 +269,7 @@ a significand and exponent.
 
 \section{IEEE 754}
 
-floating-point formats were widely supported even by the earliest
+Floating-point formats were widely supported even by the earliest
 computers, but they diverged widely in how they were implemented, how
 much precision they offered, and what semantics they used for
 rounding.  This made it difficult for numerical programs written on
