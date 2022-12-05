@@ -343,11 +343,6 @@ use of the memory hierarchy.
   A miss that occurs because the cache is empty.
 \end{definition}
 
-\begin{definition}[Conflict miss]
-  A miss that occurs because too many blocks of the program working
-  set are mapped to the same cache set.
-\end{definition}
-
 \begin{definition}[Capacity miss]
   A miss that occurs because the program working set exceeds the cache
   capacity.
@@ -356,33 +351,462 @@ use of the memory hierarchy.
 \section{Cache Organisation}
 \label{sec:cache-organisation}
 
+In this section we will look at how caches are organised in terms of
+logical units.  Their physical representation may be different, but
+this need not concern us.  What matters is how we can characterise the
+structure of caches and how this affects the way we should program in
+order to get optimal performance.  Beyond storing the actual cache
+block data, caches must also maintain a variety of book-keeping
+information so they can quickly determine whether a given address
+corresponds to a block that is present.  We call a cache block
+alongside this auxiliary information a \emph{cache line}.  when
+describing the size of a cache, we count only the cache blocks, even
+though the auxiliary information may take up a significant amount of
+space.
+
 \begin{definition}[Cache line]
   A structure that contains a cache block as well as metadata about
   the origin of the block.
 \end{definition}
 
-When $S=2^{n}, B=2^{m}$ we can easily split a $w$-bit address into
-\emph{fields}, writing $x_{i}$ for bit $i$.
+Be aware that this nomenclature is not universally used---many
+programmers use the term \emph{cache line} interchangeably for both
+what we call a cache block and a cache line.  For clarity, we will use
+more precise nomenclature.
 
+Specifically, a cache line contains three parts:
+
+\begin{enumerate}
+\item A cache block containing $B$ bytes.
+\item A $t$-bit \emph{tag} indicating which part of memory is stored
+  in the block.  The actual $t$ depends on the specific design of the
+  cache.
+\item A \emph{valid bit} indicating whether the cache line contents
+  are sensible.
+\end{enumerate}
+
+The reason for the valid bit is that as a piece of hardware, a cache
+line cannot be ``empty''.  There are always bits stored in the tag and
+block fields, and they might accidentally correspond to a valid
+address.  The valid bit is used to indicate whether the cache line
+should be disregarded when checking whether the cache contains a block
+corresponding to a given address.
+
+At a high level, looking up an address $x$ in a cache then involves
+computing the tag of the address as
+\[
+  x~\text{mod}~B
+\]
+and then searching for a cache line with a matching tag field.
+However, for large caches, searching every single cache line would be
+slow.  It is generally the case that the more choices you have, the
+slower you are at making a choice.  Since the speed of cache lookups
+is extremely critical for computer performance, this is not something
+we want to make slower than absolutely necessary.
+
+To solve this, we use \emph{set-associative caches}, where the lines
+are split into $S$ \emph{sets}, with each set containing $L$ cache
+lines, such that the total number of cache lines is $S\cdot{}L$.  The
+bits of an address are then used to determine which set the block
+corresponding to the address may be stored in.  The end result is that
+we have only $L$ lines to search, rather than all lines in the cache.
+
+\begin{definition}[$S$-way set associative cache]
+  A cache with $S$ sets.
+\end{definition}
+
+When the number of sets and the block size are both powers of two
+$S=2^{s}, B=2^{b}$, we can split a $w$-bit address into fields,
+writing $x_{i}$ for bit $i$.
+
+\[
+  \underbrace{x_{w-1}\cdots{}x_{s+b+1}}_{\text{tag}}
+  \underbrace{x_{b+s}\cdots{}x_{s}}_{\text{set index}}
+  \underbrace{x_{b-1}\cdots{}x_{0}}_{\text{block offset}}
+\]
+
+\begin{example}[Fields for an 8-bit address scheme]
+  Consider an $8$-bit address on a system with a block size of
+  $B=2^{2}$ and $S=2^{3}$ sets, with.  Going from right to left, the
+  first $b=2$ bits constitute the offset, the next $s=3$ bits the set
+  index, and the remainder are the tag.
   \[
-    \underbrace{x_{w-1}\cdots{}x_{m+n+1}}_{\text{tag}}
-    \underbrace{x_{m+n}\cdots{}x_{m}}_{\text{set index}}
-    \underbrace{x_{m-1}\cdots{}x_{0}}_{\text{block offset}}
+    \underbrace{x_{7}x_{6}x_{5}}_{\text{tag}}
+    \underbrace{x_{4}x_{3}x_{2}}_{\text{tag}}
+    \underbrace{x_{1}x_{0}}_{\text{offset}}
   \]
+\end{example}
 
-  \begin{example}[Fields for an 8-bit address scheme]
-    Consider an $8$-bit address on a system with a block size of
-    $2^{m}$ and $2^{s}$ sets, with $m=2,s=3$.  Going from right to
-    left, the first $m$ bits constitute the offset, the next $s$ bits
-    the set index, and the remainder are the tag.
-    \[
-      \underbrace{x_{7}x_{6}x_{5}}_{\text{tag}}
-      \underbrace{x_{4}x_{3}x_{2}}_{\text{tag}}
-      \underbrace{x_{1}x_{0}}_{\text{offset}}
-    \]
-  \end{example}
+In a set-associative cache, a cache block is limited to being stored
+in only a subset of all cache lines.  This means we risk having cache
+misses even through the working set of the program is smaller than the
+total size of the cache.  This is called a \emph{conflict miss}.
+
+\begin{definition}[Conflict miss]
+  A miss that occurs because too many blocks of the program working
+  set are mapped to the same cache set.
+\end{definition}
+
+\begin{figure}
+  \centering
+
+  \begin{tikzpicture}
+    \node (set4) at (-0.1,0.9) [draw,rectangle,anchor=south west,minimum width=7.7cm,minimum height=0.7cm] {};
+    \draw (0,1) rectangle +(2,0.5) node (set40) {};
+    \draw (2.5,1) rectangle +(2,0.5) node (set41) {};
+    \node[align=center] at (5,1.25) {$\cdots$};
+    \draw (5.5,1) rectangle +(2,0.5) node (set42) {};
+
+    \node at (3.5,2.1) {$\vdots$};
+
+    \node (set3) at (-0.1,2.4) [draw,rectangle,anchor=south west,minimum width=7.7cm,minimum height=0.7cm] {};
+    \draw (0,2.5) rectangle +(2,0.5) node (set30) {};
+    \draw (2.5,2.5) rectangle +(2,0.5) node (set31) {};
+    \node[align=center] at (5,2.75) {$\cdots$};
+    \draw (5.5,2.5) rectangle +(2,0.5) node (set32) {};
+
+    \node (set2) at (-0.1,3.4) [draw,rectangle,anchor=south west,minimum width=7.7cm,minimum height=0.7cm] {};
+    \draw (0,3.5) rectangle +(2,0.5) node (set20) {};
+    \draw (2.5,3.5) rectangle +(2,0.5) node (set21) {};
+    \node[align=center] at (5,3.75) {$\cdots$};
+    \draw (5.5,3.5) rectangle +(2,0.5) node (set22) {};
+
+    \node (set1) at (-0.1,4.4) [draw,rectangle,anchor=south west,minimum width=7.7cm,minimum height=0.7cm] {};
+    \draw (0,4.5) rectangle +(2,0.5) node (set10) {};
+    \draw (2.5,4.5) rectangle +(2,0.5) node (set11) {};
+    \node[align=center] at (5,4.75) {$\cdots$};
+    \draw (5.5,4.5) rectangle +(2,0.5) node (set12) {};
+
+    \node (setlabel) at (9,5) {Set};
+    \draw[->] (setlabel) -- (set1);
+
+    \node (linelabel) at (9,4) {Line};
+    \draw[->] (linelabel) -- (6.5,4.75);
+
+    \draw [decorate,decoration={brace,amplitude=10pt,mirror}]
+    (set1.north west) -- (set4.south west) node [black,midway,xshift=-1.3cm] {$S=2^{s}$ sets};
+
+    \draw [decorate,decoration={brace,amplitude=10pt}]
+    (set1.north west) -- (set1.north east) node [black,midway,yshift=0.8cm] {$L=2^{l}$ lines per set};
+
+    \node[draw, minimum height=7mm] (validbit) {valid?};
+    \node[draw, minimum height=7mm, right=2mm of validbit] (tag) {tag};
+    \node[draw, minimum height=7mm, right=2mm of tag] (b0) {0};
+    \node[draw, minimum height=7mm, right=0 of b0] (b1) {$1$};
+    \node[draw, minimum height=7mm, right=0 of b1] (b2) {$2$};
+    \node[draw, minimum height=7mm, right=0 of b2] (b3) {$\cdots$};
+    \node[draw, minimum height=7mm, right=0 of b3] (b4) {$B-1$};
+
+    \node[draw, fit=(validbit) (b4)] (cacheline) {};
+
+    \draw [decorate,decoration={brace,amplitude=20pt,raise=10pt}]
+    (b4.east) -- (b0.west) node [black,midway,yshift=-1.2cm] {$B=2^{b}$ bytes (cache block)};
+
+    \draw[densely dotted] (cacheline.north west) -- (2.5,1);
+    \draw[densely dotted] (cacheline.north east) -- (4.5,1);
+  \end{tikzpicture}
+
+  \caption{Structure of a set-associative cache with $S$ sets, $L$
+    lines per set, and a $B$-byte block per line, where we assume all
+    of these are powers of $2$.  The total size of this cache is
+    $S \times L \times B$.}
+  \label{fig:setassoc-cache}
+\end{figure}
+
+The general structure of a set-associative cache is shown in
+\cref{fig:setassoc-cache}.  When designing a cache, the number of sets
+must be carefully balanced: too large, and cache lookups take too
+long.  Too small, and we end up with more conflict misses.  Balancing
+this tradeoff is a delicate affair.  As of this writing, most CPU
+caches are 8- or 16-way set associative.  Two special cases have
+dedicated nomenclature.
+
+\begin{definition}[Direct-mapped cache]
+  A cache with $L=1$, meaning that there is only one possible location
+  for a block in the cache.
+\end{definition}
+
+\begin{definition}[Fully associative cache]
+  A cache with $S=1$, meaning that a block can be located anywhere in
+  the cache.
+\end{definition}
+
+Direct-mapped and fully associative caches tend not to occur for CPU
+caches, but they appear in lower parts of the memory hierarchy---the
+latter typically when cache misses are ruinously expensive and so it
+is worth significant overhead to avoid them.
+
+\begin{figure}
+  \centering
+
+  \begin{tikzpicture}
+    \node (set4) at (-0.1,0.9) [draw,rectangle,anchor=south west,minimum width=7.7cm,minimum height=0.7cm] {};
+    \draw (0,1) rectangle +(2,0.5) node (set40) {};
+    \draw (2.5,1) rectangle +(2,0.5) node (set41) {};
+    \node[align=center] at (5,1.25) {$\cdots$};
+    \draw (5.5,1) rectangle +(2,0.5) node (set42) {};
+
+    \node at (3.5,2.1) {$\vdots$};
+
+    \node (set3) at (-0.1,2.4) [draw,rectangle,anchor=south west,minimum width=7.7cm,minimum height=0.7cm] {};
+    \draw (0,2.5) rectangle +(2,0.5) node (set30) {};
+    \draw (2.5,2.5) rectangle +(2,0.5) node (set31) {};
+    \node[align=center] at (5,2.75) {$\cdots$};
+    \draw (5.5,2.5) rectangle +(2,0.5) node (set32) {};
+
+    \node (set2) at (-0.1,3.4) [draw,rectangle,anchor=south west,minimum width=7.7cm,minimum height=0.7cm] {};
+    \draw (0,3.5) rectangle +(2,0.5) node (set20) {};
+    \draw (2.5,3.5) rectangle +(2,0.5) node (set21) {};
+    \node[align=center] at (5,3.75) {$\cdots$};
+    \draw (5.5,3.5) rectangle +(2,0.5) node (set22) {};
+
+    \node (set1) at (-0.1,4.4) [draw,rectangle,anchor=south west,minimum width=7.7cm,minimum height=0.7cm] {};
+    \draw (0,4.5) rectangle +(2,0.5) node (set10) {};
+    \draw (2.5,4.5) rectangle +(2,0.5) node (set11) {};
+    \node[align=center] at (5,4.75) {$\cdots$};
+    \draw (5.5,4.5) rectangle +(2,0.5) node (set12) {};
+
+    \draw [decorate,decoration={brace,amplitude=10pt,mirror}]
+    (set1.north west) -- (set4.south west) node [black,midway,xshift=-1.3cm] {$S=2^{s}$ sets};
+
+    \draw [decorate,decoration={brace,amplitude=10pt}]
+    (set1.north west) -- (set1.north east) node [black,midway,yshift=0.8cm] {$L=2^{l}$ lines per set};
+
+    \node at (10,5.7) {\textbf{Address components}};
+    \node[draw, minimum height=7mm] (tagbits) at (9,5) {$t$ bits};
+    \node[draw, minimum height=7mm, right=0mm of tagbits] (setbits) {$s$ bits};
+    \node[draw, minimum height=7mm, right=0mm of setbits] (blockbits) {$b$ bits};
+    \draw[decorate,decoration={brace,amplitude=10pt,mirror}]
+    (tagbits.south west) -- (tagbits.south east) node [black,midway,yshift=-5mm,align=center,anchor=north] {tag};
+    \draw[decorate,decoration={brace,amplitude=10pt,mirror}]
+    (setbits.south west) -- (setbits.south east) node [black,midway,yshift=-5mm,align=center,anchor=north] {set\\ index};
+    \draw[decorate,decoration={brace,amplitude=10pt,mirror}]
+    (blockbits.south west) -- (blockbits.south east) node [black,midway,yshift=-5mm,anchor=north,align=center] {block\\offset};
+
+    \draw[line width=1pt] let \p1 = (set4) in (10,3) -- (10,\y1) -- (set4.east);
+    \draw[line width=1pt] (9,3.5) -- +(0,-2.8) -- +(-7.8,-2.8) -- +(-7.8,-2.5);
+    \draw[line width=1pt] (3.2,0.7) -- +(0,0.3);
+    \draw[line width=1pt] (6.2,0.7) -- +(0,0.3);
+    \node[draw, minimum height=7mm] (validbit) {valid?};
+    \node[draw, minimum height=7mm, right=2mm of validbit] (tag) {tag};
+    \node[draw, minimum height=7mm, right=2mm of tag] (b0) {0};
+    \node[draw, minimum height=7mm, right=0 of b0] (b1) {$1$};
+    \node[draw, minimum height=7mm, right=0 of b1] (b2) {$2$};
+    \node[draw, minimum height=7mm, right=0 of b2] (b3) {$\cdots$};
+    \node[draw, minimum height=7mm, right=0 of b3] (b4) {$B-1$};
+    \node[draw, fit=(validbit) (b4)] (cacheline) {};
+    \draw[densely dotted] (cacheline.north west) -- (0,1);
+    \draw[densely dotted] (cacheline.north east) -- (2,1);
+    \draw[line width=1pt] (1.2,0.7) -- +(0,-0.3);
+    \draw[line width=1pt] (11,3) -- +(0,-3.8) -- +(-8,-3.8) -- (b3.south west);
+  \end{tikzpicture}
+
+  \caption{Looking up an address in a set-associative cache with $S$
+    sets and $L$ lines per set.  The set index determines which set to
+    look at (in this case, the last one).  The set is then searched
+    for a cache line with a tag matching the tag bits of the address.
+    If a match is found (in this case, the first line), and the valid
+    bit is set, the block offset of the address is used to determine
+    which bytes to read from the block.}
+  \label{fig:setassoc-cache-lookup}
+\end{figure}
+
+A diagram of how we perform a cache lookup based on an address is
+shown in \cref{fig:setassoc-cache-lookup}.
 
 \section{Cache Performance}
+
+To characterise the cache behaviour of a program, we focus on the
+\emph{miss rate}.
+\begin{definition}[Miss rate]
+  The fraction of memory references issues by a program not found in the cache.
+\end{definition}
+For typical programs, the miss rate for the L1 cache is often around
+$3-10\%$, and often less than $1\%$ for L2 and below.
+
+Beyond the miss rate, we are also often interested in the \emph{hit
+  time} and \emph{miss penalty}.
+\begin{definition}[Hit time]
+  Time taken in the event of a cache hit.
+\end{definition}
+\begin{definition}[Miss penalty]
+  Time taken in the event of a cache miss.
+\end{definition}
+A cache hit is typically very fast---perhaps $4$ clock cycles for L1,
+$10$ for L2, and $45-75$ for L3.  Conversely, cache misses can be
+extremely costly---easily hundreds of cycles when we need to go all
+the way to main memory.  This means that a cache miss can be two
+orders of magnitude slower than a cache hit, and that minimising cache
+misses is therefore crucial for performance.
+
+\subsection{Writing cache-friendly code}
+
+When writing cache-friendly code, and for that matter whenever we want
+to optimise the performance of a program, we focus on the innermost
+loops.  In a typical program, the majority of the run-time is spent in
+a comparatively small portion of the overall code.  Generally, it is
+rarely worth optimising non-loop code.
+
+As a general rule of thumb for writing cache-friendly code, we should
+avoid dereferencing many different pointers, as we have in principle
+no way of knowing where in the memory they point.  If we perform a
+huge number of tiny allocations with \texttt{malloc()}, we have no
+knowledge of where in memory they are located relative to each other,
+and no way of ensuring that we use them in an order that provides good
+spatial locality.  As an example, linked lists have notoriously
+terrible cache behaviour, because neighbouring links in the list may
+be arbitrarily distant in memory.  Traversing a linked list can easily
+cause a cache miss whenever we moved to the next element.  It is
+better to work on a few large allocations (such as arrays), where we
+can analyse the access patterns and decide whether our accesses
+exhibit good locality.
+
+Another rule of thumb is to minimise the program footprint.  If our
+working set fits in L3 cache, then we will never see a L3 cache miss
+after the initial compulsory misses needed to load the data into cache
+in the first place.  Sometimes this can be achieved by using smaller
+data types (e.g. 16-bit integers instead of 32-bit integers) or by
+clever representations that take advantage of \emph{sparsity} (e.g. if
+a large matrix is mostly zeroes, store only the non-zero elements as
+well as their coordinates).
+
+But sometimes we simply have to work on a large piece of data that
+will not fit in cache.  We must carefully consider how we traverse it
+to minimise the number of cache misses.  A common example is matrix
+multiplication.  As matrix multiplication is a fundamental primitive
+in many numerical techniques, much time has been spent developing
+elaborate implementation techniques for making them run as fast as
+possible on pretty much any computer ever built.  Our analysis, and
+our optimisation, will be comparatively simple, but hopefully still
+illustrative.
+
+\begin{lstlisting}[caption=Matrix multiplication in C.,
+label={lst:matmul.c},
+language=C,
+frame=single]
+for (int i=0; i<n; i++) {
+  for (int j=0; j<n; j++) {
+    for (int k=0; k<n; k++)
+      c[i][j] += a[i][k] * b[k][j];
+  }
+}
+\end{lstlisting}
+
+Our starting point is the program fragment shown in
+\cref{lst:matmul.c}.  The two \texttt{n}-by\texttt{n} matrices
+\texttt{a} and \texttt{b} are given to us in row-major order, and we
+must produce a result matrix \texttt{c} also in row-major order.  Each
+matrix element is a \texttt{double}, comprising 8 bytes.  The total
+amount of work is $O(n^{3})$, and each of the $n^{2}$ elements in
+\texttt{c} is the result of $n$ summed values.
+
+Further, assume a cache block size
+\[
+  B = 64
+\]
+meaning that a single block can hold $8$ \texttt{double}s.  We also
+assume that \texttt{n} is very large---specifically, so large that the
+cache is not large enough to hold a full row or column.  This means if
+we traverse a row fully from start to end, then traversing it again
+cannot take advantage of any cache contents.
+
+We analyse the performance of the program by looking at the access
+pattern of the innermost loop, because the statements in there are
+executed $n^{3}$ times, making them asymptotically dominant relative
+to the other statements in the program.
+
+Using the assumptions above, consider a loop that looks as follows:
+\begin{lstlisting}
+for (int k=0; k<n; k++)
+  sum += a[0][k]
+\end{lstlisting}
+As we are traversing a single row of \texttt{a}, we can take advantage
+of spatial locality.  Each cache miss will load not just the current
+element into the cache, but a total of $8$ elements (ignoring
+speculative prefetching), meaning that we will only have a cache miss
+every $8$th iteration.  This gives us a miss rate of $0.125$.
+
+Now consider:
+\begin{lstlisting}
+for (int k=0; k<n; k++)
+  sum += a[k][0]
+\end{lstlisting}
+Here we are jumping through memory with a stride of \texttt{n}.  As we
+assume \texttt{n} is very large (certainly larger than a cache block),
+we will have a cache miss on every single iteration.  The miss rate is
+$1$.
+
+With this line of thinking, we can consider the innermost loop in
+\cref{lst:matmul.c}.  The miss rate for accesses to the array
+\texttt{a} is $0.125$, to array \texttt{b} is $1$, and to array
+\texttt{c} is $0$, because we access the exact same element in every
+iteration---providing perfect temporal locality.  The total miss rate
+is $1.125$.  Intuitively, we are traversing the array \texttt{a}
+row-wise, which is good, and \texttt{b} column-wise, which is bad.  As
+a rule of thumb, whenever we index a multi-dimensional array, we are
+indexing with a loop variable of the innermost loop, and that loop
+variable is \emph{not} used to index the last dimension of the array,
+we are probably traversing in a way that has poor spatial locality.
+
+\begin{lstlisting}[caption=Matrix multiplication in C with the loops permuted.,
+label={lst:matmul-kij.c},
+language=C,
+frame=single]
+for (int k=0; k<n; k++) {
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++)
+      c[i][j] += a[i][k] * b[k][j];
+  }
+}
+\end{lstlisting}
+
+Now consider the program in \cref{lst:matmul-kij.c}.  It computes the
+same thing as {lst:matmul-kij.c}, but with the loops reordered.
+Looking at the inner loop, we are accessing \texttt{c} and \texttt{b}
+row-by-row, so these each have a miss rate of $0.125$, while the miss
+rate for \texttt{a} is $0$ because we are accessing the same element
+repeatedly.  The total miss rate is $0.25$.
+
+\begin{lstlisting}[caption=Matrix multiplication in C with the loops permuted.,
+label={lst:matmul-jki.c},
+language=C,
+frame=single]
+for (int j=0; j<n; j++) {
+  for (int k=0; k<n; k++) {
+    for (int i=0; i<n; i++)
+      c[i][j] += a[i][k] * b[k][j];
+  }
+}
+\end{lstlisting}
+
+Can we permute the loops further?  Yes, consider
+\cref{lst:matmul-jki.c}.  Here we are traversing both \texttt{a} and
+\texttt{c} along columns, giving a miss rate of $1$, while the
+accesses to \texttt{b} have a miss rate of $0$.  The total miss rate
+is $2$.  Clearly not good.
+
+\begin{figure}
+  \centering
+    \includegraphics[width=\linewidth]{img/matmul.png}
+    \caption{Benchmarking the different matrix multiplication
+      implementations.  The $x$ axis shows the edge size of the
+      matrices, while the logarithmic $y$ axis shows the runtime in
+      milliseconds.  Note that the $kij$ loop ordering, which our
+      analysis determined as optimal, is indeed about a factor of two
+      faster than the other implementations.  Somewhat surprisingly,
+      $iji$ (the original program) and $jki$ are about equally fast.
+      This is possibly because the values of \texttt{n} used here are
+      not as large as we assumed in our analysis.}
+  \label{fig:matmul-graph}
+\end{figure}
+
+Our analysis shows that \cref{lst:matmul-kij.c} is the most
+cache-efficient implementation.  Indeed, benchmarking these on a real
+machine produces \cref{fig:matmul-graph}.  Note that all we did was
+permute the loop ordering.  While obtaining true peak performance
+typically requires more complicated program transformations than this,
+we can often get quite far simply by carefully considering the order
+in which we traverse our data.
 
 %%% Local Variables:
 %%% mode: latex
