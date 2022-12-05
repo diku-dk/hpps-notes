@@ -305,13 +305,39 @@ that the organisation of memory into cache blocks does not affect
 addressing: data is still byte-addressed, and programs are not
 directly aware of $B$.  We merely say that the first $B$ bytes of
 memory belong to the first cache block, the next $B$ bytes to the
-second, and so on.  Each level of the memory hierarchy may use
-different cache block sizes, although they are usually the same for
-L1/L2/L3 caches.
+second, and so on.  This means a memory address $x$ belongs to block
+$x mod B$.  When $B$ is a power of 2 $B=2^{m}$, this can be computed
+simply by dropping the $b$ least significant bits of $m$.  We will
+return to this in \cref{sec:cache-organisation}.  Each level of the
+memory hierarchy may use different cache block sizes, although they
+are usually the same for the L1/L2/L3 caches.
 
-\begin{definition}[Program working set]
-  The amount of memory accessed by the program.
+Caching is effective when the data being actively actively by the
+program within some bounded period of time fits within the cache.  We
+call the size of this actively used data the \emph{working set}.
+
+\begin{definition}[Working set]
+  The amount of memory accessed by a program within a bounded period
+  of time.
 \end{definition}
+
+\begin{definition}[Memory footprint]
+  The total amount of memory allocated by a program.
+\end{definition}
+
+During the total runtime of a process, different working sets may be
+in use, as the program switches between different subtasks.  Consider
+a data analysis program sequentially processes a collection of files,
+one at a time, by loading them into memory.  We would characterise the
+working set of such a program as the size of a \emph{single} file
+(perhaps the largest one), rather than summing the sizes of all files.
+We also focus only on data that is being frequently accessed.  It is
+fine for the total memory footprint of a program to exceed what can be
+stored in the cache, as the excess is simply stored further down in
+the memory hierarchy.  It is not unusual for programs to keep large
+amounts of data in memory at the same time, while actively working on
+only small parts at a time.  Indeed, this is exactly how to make best
+use of the memory hierarchy.
 
 \begin{definition}[Compulsory miss]
   A miss that occurs because the cache is empty.
@@ -328,11 +354,33 @@ L1/L2/L3 caches.
 \end{definition}
 
 \section{Cache Organisation}
+\label{sec:cache-organisation}
 
 \begin{definition}[Cache line]
   A structure that contains a cache block as well as metadata about
   the origin of the block.
 \end{definition}
+
+When $S=2^{n}, B=2^{m}$ we can easily split a $w$-bit address into
+\emph{fields}, writing $x_{i}$ for bit $i$.
+
+  \[
+    \underbrace{x_{w-1}\cdots{}x_{m+n+1}}_{\text{tag}}
+    \underbrace{x_{m+n}\cdots{}x_{m}}_{\text{set index}}
+    \underbrace{x_{m-1}\cdots{}x_{0}}_{\text{block offset}}
+  \]
+
+  \begin{example}[Fields for an 8-bit address scheme]
+    Consider an $8$-bit address on a system with a block size of
+    $2^{m}$ and $2^{s}$ sets, with $m=2,s=3$.  Going from right to
+    left, the first $m$ bits constitute the offset, the next $s$ bits
+    the set index, and the remainder are the tag.
+    \[
+      \underbrace{x_{7}x_{6}x_{5}}_{\text{tag}}
+      \underbrace{x_{4}x_{3}x_{2}}_{\text{tag}}
+      \underbrace{x_{1}x_{0}}_{\text{offset}}
+    \]
+  \end{example}
 
 \section{Cache Performance}
 
