@@ -152,7 +152,7 @@ dictionary, you will find them to have almost the same definitions.
 In computer science, they are terms of art with distinct (although
 related) meanings.
 
-To illustrate concurrency, consider an FPS video game, which from a
+To illustrate concurrency, consider a video game, which from a
 programming perspective is basically a real-time interactive
 simulation.  Many things need to happen concurrently:
 
@@ -166,32 +166,39 @@ simulation.  Many things need to happen concurrently:
 \item We need to run artificial intelligence for computer-controlled
   enemies.
 \item We need to compute physics interactions.
+\item In a multiplayer game, we need to transmit information
+  information about the local game world to other players across the
+  network, as well as incorporate information we receive in return.
 \item Probably we also wish to perform cleanup tasks, such as removing
   objects from the game world that after a while are no longer
   necessary (e.g. the remains of deceased enemies), to clear up system
   resources.
 \end{itemize}
 
-In terms of programming, it is nicer if we can write each of these
-parts as separate flows of control.  The artificial intelligence code
-should not worry about constantly checking whether it's time to draw a
-new screen frame, or whether the player hit some key.  We might
-implement each of these parts as a distinct thread, and depend on the
-operating system to \emph{context-switch} between them as needed, and
-maybe use some form of \emph{scheduler policy} that understands that
-it's more important for the threads responsible for music and graphics
-to run when they need to, than the cleanup thread.  If we have only a
-single processor, then all these different threads run
+From a programming perspective, it is nicer if we can write each of
+these parts as separate flows of control. The artificial intelligence
+code should not worry about constantly checking whether it's time to
+draw a new screen frame, or whether the player hit some key.
+Similarly, the rate at which we receive information from the network
+is completely unpredictable, relative to our other responsibilities.
+
+One solution is to implement each of these parts as a distinct thread,
+and depend on the operating system to \emph{context-switch} between
+them as needed. Maybe we can also use some form of \emph{scheduling
+  policy} that understands that it's more important for the threads
+responsible for music and graphics to run when they need to, than the
+thread that cleans up dead objects or simulates physics. If we have
+only a single processor, then all these different threads run
 \emph{concurrently}, in that they overlap in time, but only one will
-physically be executing instructions at any given point in time.  This
+physically be executing instructions at any given point in time. This
 means that concurrency can be a useful programming model even when the
-goal is not to make the program faster.  For that matter, threads are
+goal is not to make the program faster. For that matter, threads are
 not the only way to implement concurrency---asynchronous event loops
-are a popular technique in highly scalable web servers, but outside
+are a popular technique for highly scalable web servers, but outside
 the scope of this course.
 
 \begin{definition}[Concurrency]
-  Concurrency is the use of multiple, possibly communicating, logical
+  Concurrency is the use of multiple, possibly interacting, logical
   flows of control.
 \end{definition}
 
