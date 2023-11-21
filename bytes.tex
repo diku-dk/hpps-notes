@@ -210,17 +210,17 @@ for a computer to be useful, this data must be made comprehensible to
 a human.
 
 This usually happens through an \emph{input-output} (IO) device.
-Imagine an electronic typewriter that receives bytes over a wire.
-Upon receiving a byte, it consults a table called a table that maps
-each of the $256$ possible bytes to a character, and then prints the
-corresponding character on a piece of paper.  This was exactly how
-early \emph{teletypes} worked, and the idea of associating numbers
-with characters, which are then printed or shown as appropriate, is
-still relevant.  Today, it is unlikely that you interact with your
-computer through a teletype, and instead the bytes are passed through
-multiple layers of hardware and software until your monitor ultimately
-illuminates multiple tiny LEDs to form the desired shape on the
-screen.
+Imagine an electronic typewriter that receives bytes over a wire. Upon
+receiving a byte, it consults a table called a \emph{coded character
+  set} that maps each of the $256$ possible bytes to a character, and
+then prints the corresponding character on a piece of paper. This was
+exactly how early \emph{teletypes} worked, and the idea of associating
+numbers with characters, which are then printed or shown as
+appropriate, is still relevant. Today, it is unlikely that you
+interact with your computer through a teletype, and instead the bytes
+are passed through multiple layers of hardware and software until your
+monitor ultimately illuminates multiple tiny LEDs to form the desired
+shape on the screen.
 
 \begin{definition}[Character set]
   A mapping from integers to characters.
