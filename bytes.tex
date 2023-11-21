@@ -317,7 +317,7 @@ Note that the number $49$ encodes the ASCII digit \texttt{1}, $50$
 encodes \texttt{2}, etc.  It is an easy mistake to conflate the number
 in memory with the (in principle arbitrary) number that identifies a
 \emph{digit character} in the ASCII table.  Note also that endianness
-business does not matter for human-readable text.  The order in which
+does not matter for human-readable text.  The order in which
 the characters appear in memory (or the order in which they are
 submitted to the IO device) are also the order in which they will
 appear to a human.\footnote{There are character encodings that
@@ -343,7 +343,7 @@ cause of countless security holes.  The reason is that it is awfully
 easy to forget to add the trailing $0$ byte when constructing a
 string.  When later code then attempts to work on the string, it will
 go past the intended end and into arbitrary memory, until a $0$ byte
-happens to be encountered by happenstance.
+happens to be encountered.
 
 Most other languages employ a representation where a string is stored
 alongside an integer containing the size of the string.  This is much
