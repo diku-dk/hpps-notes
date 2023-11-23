@@ -483,6 +483,107 @@ and we see in a process monitor that some of our processors are idle
 while our program is running, it is worth considering whether our
 loops could benefit from a scheduling clause.
 
+\section{The Big Concurrency Problems}
+
+Concurrency and Parallel programming is a complex task, and can often be 
+a study in what not to do. Luckily, OpenMP manages a lot of the underlying system interactions to ensure correct and efficient concurrency, but no system is perfect. If you ever need to debug whats going on, or try to implement your own concurrent solution you will need a firm understanding of the two core problems; race conditions and deadlocks.
+
+\subsection{Races}
+
+\begin{definition}[Race Condition]
+  Sometimes also referred to simply as a race. A race condition is any processing whose final result depends on the arbitrary ordering of prior operations.
+\end{definition}
+
+Races are a result of concurrent programs least desirable feature, non-determinism. This is due to the essentially random\footnote{Note that in practice the scheduler will not be literally scheduling at random, but that process scheduling is way out of scope for this course. As user of a computer, we also have little to no control over other users and processes that our program may be competing with, so even when we do understand the scheduler it is still treated as effectively random.} scheduling of any threads and processes, so we do not actually know in what order concurrent operations will be performed.
+
+Within threading this is most often caused by global variables being shared among several threads. This is as each thread can read and write to and from the same location, in essentially any order. As an example, consider the code in listing \ref{lst:race-example}. This code will spread the execution of the counting loop across many threads, which will all read, increment and write to count in an arbitrary order. This will produce an output for count that could be any value between 2 up to 1000000. In practice you are \textit{very} unlikely to get a result as low as 2, but it is technically possible if you get the very unluckiest scheduling\footnote{If you're interested in how this is possible you can look through the trace on page 36 of this \href{https://link.springer.com/content/pdf/10.1007/s00165-017-0447-x.pdf}{pdf}}. Of course its just as possible that you get 1000000 but this non-deterministic result is everything we want to avoid in computing. 
+
+\begin{figure}
+  \lstinputlisting[
+  caption={An example of a racing program.},
+  label={lst:race-example},
+  language=C,
+  frame=single]
+  {src/race.c}
+\end{figure}
+  
+\subsection{Locks}
+
+The code in \ref{lst:race-example} will produce a non-deterministic result, which we have already seen how to solve in OpenMP, by adding 'reduction(+:count)' after the 'parallel for' loop. Reductions are great for OpenMP, but a more broadly applicable solution is the use of a mutex. Note that within the wider literature you will see references to mutexes, locks, or semaphores. These are all name for related but slightly different objects but within HPPS, and we will only concern ourselves with mutexes. They are effectively a flag that can only be set by one thread at a time. 
+
+This is achieved via atomic operations. An atomic operation is one that cannot be interrupted. Recall that the problem with race conditions is that we cannot guarantee that a thread will not interrupt another thread, even if it is midway through an operation. Mutexes are implemented at the machine level to only have two operations, set (e.g. claim the mutex) and release (e.g. give up the mutex). Both of these operations are implemented as atomic operations, that the scheduler cannot interrupt. Once a thread has claimed a mutex, then any other threads that try to claim it will be blocked until the mutex is released. This can have the effect of reducing how much parallel processing is taking place, as threads will have to wait for mutexes to be released before they can continue. However, this cost to speed is worth it if it means we can get an actually meaningful result.
+
+\begin{figure}
+  \lstinputlisting[
+  caption={An example of a mutex fixing a racing program.},
+  label={lst:mutex-example},
+  language=C,
+  frame=single]
+  {src/mutex.c}
+\end{figure}
+
+An example of how a mutex can be implemented using the 'pthread' library, as is shown in listing \ref{lst:mutex-example}. This example will always produce the correct result, regardless of how many threads are used to calculate it. Note that in this case, the mutex is locking access to the entirety of the parallelised section, meaning that this program will in fact be much slower than the racing program shown in listing \ref{lst:race-example}. We can see this in the timings presented below, when the mutexed version is 3 times slower, as the threads need to keep waiting for each other to release the mutex. This shows us that mutex usage should be minimised, by only locking the smallest number of instructions to ensure we get the correct result. Sometimes a lock is inevitable though, and so if we were going to improve this program we would perhaps restructure the entire code so that each thread calculates a subtotal, and these are then totalled in a mutexed variable. This is in fact what an OpenMP reduction automatically does.
+
+\begin{minipage}{1.0\linewidth}
+  \begin{verbatim}
+    $ time ./race
+    real    0m0.031s
+    user    0m0.173s
+    sys     0m0.004s
+    $ time ./mutex
+    real    0m0.102s
+    user    0m0.161s
+    sys     0m0.484s
+  \end{verbatim}
+\end{minipage}
+
+\subsection{Deadlock}
+
+Mutexes may help solve the problem of races, but they can introduce a compeletly new problem, deadlock. 
+
+\begin{definition}[Deadlock]
+  Any situation where no system progress can take place, as every process/thread is waiting for another to progress before it can.
+\end{definition}
+
+Much like races, deadlocks can be non deterministic which can make them twice as annoying to debug, but we must treat the possibility of a deadlock as though it will deadlock eventually. Therefore we need to design our systems so that they are deadlock free. As an example of how a deadlock could occur consider the following two threads, each which just lock and then unlock two mutexes each:
+
+
+\begin{minipage}{1.0\linewidth}
+  \begin{verbatim}
+     Thread 1        Thread 2 
+      lock(A)         lock(B)
+      lock(B)         lock(A)
+     unlock(A)       unlock(A)
+     unlock(B)       unlock(B)
+  \end{verbatim}
+\end{minipage}
+
+The ordering of these operations is completely up to the whims of the scheduler. Many orderings of these operations would be fine, but one such bad one would be if thread 1 locked mutex A, but was then immediately interrupted by thread 2 who would then lock mutex B. Thread 2 cannot continue as it cannot lock mutex A, as it is already locked by thread 1. Thread 1 also cannot continue as its next operations is to lock mutex B, but it is locked by thread 2. This is a deadlock, as there is no way for either thread to progress. There is also no way for these two threads to detect that they are in a deadlock, the system is completely stopped with no way to recover.
+
+\subsection{Progress Graphs}
+
+Reasoning about how each thread could be scheduled is all well and good, but a more robust method to identify potential deadlocks would help a lot. We can do so through the use of progress graphs. These are informal sketches, where we can map all the mutex interactions, and can then deduce any potentially deadlocking behaviour. For an example looking to figure \ref{fig:progress-deadlock}. In this type of graph we map each threads progression along the graph axis'. We only need to map any locking and unlocking operations, as anything else may be time consuming but is ultimately a non-blocking operation that will complete in a finite amount of time.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{img/progress-deadlock.pdf}
+  \caption{A progress graph of the two potentially deadlocking threads.}
+  \label{fig:progress-deadlock}
+\end{figure}
+
+As each thread is sequential, its progress can be mapped by following along its axis, with any point in the graph being an expression of the combined states of both graphs. For example, the bottom left corner would be neither thread having started yet, with the top right corner being both threads having completed. The shaded blue section shows forbidden zones, where due to our mutexes is an impossible state to reach. There are two overlapping zones here, one for mutex A and one for mutex B, with them each overlapping in the middle of the graph. We can derive the locations of these zones by taking the coordinate of where each thread locks the mutex as the bottom left corner, and the coordinate of where each thread unlocks the mutex as the top right corner.
+
+Two traces have been shown through the graph, one in green and one in red. The green shows a valid route through that does not enter any forbidden zone and so will produce a valid result. The red is an impossible trace as it enters a state within the forbidden zones, and so cannot occur in practice.
+
+The concerning part of this graph is the red shaded area towards the bottom left of the graph. This shows a potential deadlock. As each thread can only progress linearly, our route through the graph can only be parallel to either axis. If our state ever enters the red zone then there is no way to escape as progress is blocked by the two forbidden zones. This makes it trivial to say that if we can draw a progress graph, if it none of these progress traps exist then our system is deadlock free. A solution to this is to reorder the operations our threads perform. This can be seen in figure \ref{fig:progress-safe} where both threads are now locking and unlocking the mutexes in the same order. No progress traps exist and any valid state has at least one path out of, therefore we are always deadlock free.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{img/progress-safe.pdf}
+  \caption{A progress graph of the two never deadlocking threads.}
+  \label{fig:progress-safe}
+\end{figure}
+
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: "notes"
