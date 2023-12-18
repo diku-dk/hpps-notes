@@ -1,0 +1,63 @@
+\chapter{Operating Systems}
+\label{chap:os}
+
+The operating system (Often abreiviated to OS) is a core piece of software that manages both the device hardware, as well as how other software runs on that hardware. An OS is present on the vast majority of devices we interact with, with the only real exception being simple, dedicated devices that perform only a single function.  Most OSs in use today are either explicitly derived from Unix, or are heavily inspired by the systems and operations is developed. 
+
+\section{The Kernel}
+
+At its core, the OS provides two abstractions that have proven to be very useful. These are processes and virtual memory. The ultimate aim of both of these concepts is to allow for multiple different programs, users or systems to operate on as many different devices as possible, without programmers having to create custom implementations depending on how their program was run. In order to do this, the OS provides what is known as the kernel. This can be thought of as the very core of the OS, and has complete control over all hardware and software running on a device.
+
+The kernel provides a variety of functions to software running on the same device, which we might think of as being core to how a system operates. These include functions to open files, write to files, read from files, start new processing, end existing processing, and so on. These functions are known as \textit{system calls} are the basic building blocks for any software to interact with any hardware, with a key abstraction being that no software needs to know how to physically write to a file on a given device, it can simply call the \textit{write} function to do so. Crucially, it is only by calling this function that any software can read/write to/from the hardware, giving the kernel complete control over who is writing to what and how they do so.
+
+\section{Processes}
+
+As you should know by now, a CPU can only ever do one thing at a time. A CPU is capable of running a series of instructions, with data being manipulated within registers. Not all data will fit into registers, with the wider data stored in memory. The CPU will progress through its instructions one at a time, starting at the start until it reaches the end. This is not an incorrect model of how a computer works, but is obviously a simplification. One limitation of this system is that the CPU is limited to doing only one thing at a time, yet it should be obvious that your computer is capable of doing many things at the same time. This is enabled by the OS concept of processes.
+
+A process is a conceptual grouping of a programs CPU register counters, the program code, as well as the memory used by the code. This is everything we discussed in our simple example above. This is known as the state, with each processes having its own state of registers, memory and instructions. By taking a complete state and writing it to memory, then writing a new state into the CPU we can swap between two processes. If we do this often enough, the computer can give the impression of doing multiple different things at once, even with only a single CPU. This act of switching states is known as a \textit{context switch} and typically takes at least 1.2 microseconds. This means there is an unavoidable overhead in switching between processes, but its almost always worth it as we can now do multiple things at once.
+
+An example of a process can be almost anything. Our internet browser will run in a process with its own state, whilst a text editor could be another. Games, music players, scripts and apps all run in their own processes with their own state. Often times there are also smaller systems that run in their own background processes, such as update checkers, download managers, network managers and the like. These might not have a dedicated user interface or display but still run in the background, which is why when we inspect our systems using tools such as \textit{top}, \textit{htop} or the \textit{process manager}, we can often see many different processes running on our machine. For most laptops or desktops this process count could even be in the low hundreds. This isn't to say that each process necessarily has something to do at that point, in fact most will be sleeping until they have something to do. For instance, an update checker might only wake once every 24 hours, check with some server if an update has been released, and then go back to sleep. 
+
+\subsection{Concurrency and Parallel}
+
+Note that often we aren't literally doing multiple things at once, but that the compute switch between multiple processes so quickly and humans are so slow that it looks like they're taking place at the same time. This is referred to as \textit{concurrency}, where different processes can each progress before any of them have finished, even if they aren't progressing at literally the same time. Modern computers often have more than a single CPU core however, and so they can do multiple things at once. This is referred to as \textit{parallel}, where two things are progressing at literally the same time. Processes are concurrent, as each is a self contained logical unit, and so we can interrupt any process with another at any point. Anything that is concurrent can be executed in parallel, though this depends on their being the hardware to support it.
+
+\subsection{Process Scheduling}
+
+Any time we introduce some new concept, that presumably is non-trivial for someone to implement, it is always worth asking what it gives us. Processes allow for a complete compartmentalisation of a programs code and its data, from any other programs code and data. As well as allowing for the concurrent and parallel scheduling described above, this compartmentalisation also means that programmers are free to write whatever program they want, as though they had complete control over the entire hardware. Programmers can take as much time as they need, running as many tasks as they wish, without having to worry about who else might need the same resources. Consider your own programming, and what you've asked the computer to do. Presumably at some point you've run a program that has lasted for several hours, potentially performing some complex operations whilst doing so (most modern computer games and even browsers would be another good example of this). You've not need to insert little breaks everyone now and again so that other processes can continue in the background, this is all managed automatically by the OS using processes. 
+
+The part of the OS that decides what process to schedule is funnily enough, called a \textit{scheduler}. Process scheduling is actually a vast area of study and expertise in its own right, which we do not have the time to get into here. Instead it suffices to say that most schedulers will try to give each process at least some time on a regular basis to keep executing. This is to avoid what is termed \textit{livelock}, where some execution can progress but the process is not given any resources to do so. Round robin is the most simple scheduling style, where the scheduler will let process 1 run for a short time, then let process 2 run, for a short time, then process 3 and so on, until returning to let process 1 run for a short time again. This keeps everyone moving a little bit, and though there are far more advanced algorithms that start weighting the scheduling based on how much work each process needs to do, this fundamental principle still applies. 
+
+\section{Virtual Memory}
+
+The second core concept that OSs provide, is that of virtual memory. Particularly astute readers might have noted that processes can't really enforce their own compartmentalisation, as there is nothing stopping one process from writing into the contents of another. Luckily processes are paired with virtual memory so that everything we've described already is still true, but first let us consider the alternative.
+
+\subsection{Physical Memory}
+
+A simple memory management system would use an address space that directly maps on to what it is trying to describe. This is analogous to most street addressing, where all the buildings on a given street will start at number 1 at one end, and then increment along the street. This is a physical mapping as number 1 refers to the first house, number 2 to the house next to it and so on. 
+
+The advantage of such a system is that it is extremely quick to derive and use. As soon as you're told and address, you know exactly where to go, or what data to read without any additional steps. The downside is that the simplicity makes it hard to enforce access to any particular bit. Again, using the street address analogy, consider that most military bases don't appear on road maps. This doesn't make it impossible to find them, but its suddenly a lot harder to send them a letter.
+
+Such physically mapped systems are still used in some computing systems, especially in very small or simple systems that typically only perform a single function on very limited hardware. However, this is certainly not a common method on any system complex enough to be running an OS.
+
+\subsection{Virtual Mapping}
+
+Rather than directly mapping address to memory, the OS will provide each process with a virtual mapping. This is the same as in the physical example, where there is a collection of individual virtual addresses, which still map to some memory location. The process will treat these addresses as though they are a physical mapping, and so will still read and write anything to the addresses in that mapping, but the process has no idea what physical address each virtual address actually maps to.
+
+Each process is given its own virtual memory space, which may or may not overlap. It doesn't really matter if they do or not as they are completely isolated, so what is address 1000 for one process, will almost certainly not map to the same location as address 1000 in another process. Exactly how much virtual memory is given to each system is configured on a per device basis, though this is usually related to how much RAM your device has.
+
+\subsection{Page tables}
+
+Within virtual memory mapping, address are stored in page tables which directly map virtual address to physical addresses. This address translation takes place in a dedicated piece of hardware called the Memory Management Unit (MMU). Each address will usually be for a memory page, rather than an individual byte. This is as memory is divided into pages (typically of 4KB) so that we don't need to store addresses of every individual byte. There is also no requirement that our virtual memory is actually next to each other in physical memory. Therefore virtual address 1 could point to one location in physical memory, while virtual address 2 points to some very very different location. This demonstrates one advantage of virtual memory, as even in this example the programmer can navigate around this virtual memory in a linear fashion, and the fact that it is actually quite disparate in memory doesn't even appear to them. 
+
+\subsection{Sizing Virtual Memory and Physical Memory}
+
+Just as there is a limit to how much space a physical mapping can map, there is a limited size to the virtual address space, though they might not be as linked as you would expect. You can absolutely have a bigger virtual memory space than physical, and this is in fact used in most systems. As the limit on your physical memory is usually your RAM, this is often taken as the starting size for your virtual memory. However, many systems use the concept of 'swap' memory, where we allow for a slightly larger virtual memory than physical memory. This means we can store more data, and are less likely to run into problems of loading programs too big to store.
+
+However, we haven't actually expanded our memory, and though we can refer to more pages than really fit into our memory, we are going to need to swap pages in and out of cache if we are to use such a system. If we only add a small amount of swap memory (~10\%) then we aren't going to see too many cache misses, but if we add far too much then we're going to defeat the entire point of the cache as we'll just be swapping things in an out constantly. Usually locality will save us here and minimise misses, but again, too large a swap will sink us here if we aren't careful.
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "notes"
+%%% End:
