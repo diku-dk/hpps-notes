@@ -40,10 +40,10 @@ bit.  For example:
   not~\cite{gunji2011robust}.
 \end{enumerate}
 Some of these representations are more practical than others, but all
-are ultimately based on the notion of a \emph{bit}.  The choice of
+are ultimately based on the notion of a \emph{bit}. The choice of
 which representation is most practical in a given setting is largely
 based on how we can construct machinery that manipulates the physical
-representation of the bits.  Modern computers are overwhelmingly
+representation of the bits. Modern computers are overwhelmingly
 electronic, and use \emph{transistors} to transform electrical signals
 representing bits, but optical representations are also common for
 long-distance communications.
@@ -58,9 +58,8 @@ bits, called a \emph{bit vector}.
   which we write as $x=\bitvector{x_{w-1}\ldots{}x_{0}}$.
 \end{definition}
 
-Note that the convention is that bit $x_{0}$ in a bit vector is
-written at the \emph{rightmost} position.  This is again merely a
-convention, but done to resemble the ordering of digits in
+Note the convention that bit $x_{0}$ in a bit vector is written at the
+\emph{rightmost} position. This resembles the ordering of digits in
 mathematical notation.
 
 \begin{definition}[Concatenation of bit vectors]
@@ -89,15 +88,16 @@ $\mathbb{N}$.
 \label{sec:bitnats}
 
 One of the most obvious ways to interpret a bit vector is as a number
-in base 2.  For example, the bit vector $\bitvector{1001}$ represents
-the number $1001_{2} = 9_{10}$.  Note the subscripts used to denote
-the \emph{radix} of the literals---we will include these whenever the
-radix would otherwise be ambiguous.  However, it is important to note
-that a $\bitvector{1001}$ \emph{is not the same} as $1001_{2}$!  They
-are objects in completely different domains, and it makes no sense to
-say that they are equal or unequal.  It is merely a quirk of notation
-that they look similar when written down, and we shall soon enough see
-encodings where this is not the case.
+in base 2. For example, the bit vector $\bitvector{1001}$ might be
+interpreted as an encoding of the number $1001_{2} = 9_{10}$. Note the
+subscripts used to denote the \emph{radix} of the literals---we will
+include these whenever the radix would otherwise be ambiguous.
+However, it is important to note that a $\bitvector{1001}$ \emph{is
+  not the same} as $1001_{2}$! They are objects in completely
+different domains, and it makes no sense to say that they are equal or
+unequal. It is merely a quirk of notation that they look similar when
+written down, and we shall soon enough see encodings where this is not
+the case.
 
 To completely specify the encoding of natural numbers, we must define
 how a bit vector of length $w$ is interpreted as a number.  Here we do
