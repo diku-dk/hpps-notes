@@ -257,7 +257,7 @@ such that each thread gets its own \emph{private} copy of
 per-thread results are then combined to obtain the final result.
 
 Reduction clauses only immediately work with a small set of built-in
-binary operators: \lstinline{+}, \lstinline{*}, \lstinline{-},
+binary operators: \lstinline{+}, \lstinline{*},
 \lstinline{&&}, \lstinline{||}, \lstinline{&}, \lstinline{|},
 \lstinline{^}, \lstinline{max}, and \lstinline{min}.  It is also
 possible to use user-defined functions, but this is beyond the scope
@@ -267,11 +267,11 @@ associativity, we mean that for some operator $\oplus$, we have
 \[
   (x \oplus y) \oplus z = x \oplus (y \oplus z).
 \]
-That is, the ``order of evaluation'' does not matter.  This is what
+That is, the ``order of evaluation'' does not matter. This is what
 allows us to partition the iterations of a reduction loop between
-multiple threads, without changing the result.  Note that subtraction
-and division is \emph{not} associative---this is why OpenMP does not
-allow them in a reduction clause.
+multiple threads, without changing the result. Note that subtraction
+and division is \emph{not} associative---this is we don't use them in
+reduction clauses.
 
 A neutral element $0_{\oplus}$ for some operator $\oplus$ is a
 ``natural zero'' that does not change the result of evaluation:
