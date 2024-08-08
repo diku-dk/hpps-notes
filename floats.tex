@@ -374,14 +374,20 @@ the binary point.  These digits are sometimes called the
 \emph{fraction}.
 
 Otherwise, when $e=e_{\text{min}}$, we must also have that
-$0 \leq m < 1$, and we call this case a \emph{subnormal} number.  For
+$0 \leq m < 1$, and we call this case a \emph{subnormal} number. For
 subnormal numbers, the bit before the binary point must necessarily be
-0.  That is, in this case $m$ indicates a number of the form
-$0.xxx_{2}$.  This means that when we encode $m$ in a bit vector, we
+0. That is, in this case $m$ indicates a number of the form
+$0.xxx_{2}$. This means that when we encode $m$ in a bit vector, we
 can elide the bit before the binary point, because it can be inferred
 from $e$, thus saving a a bit.
 
 The special case of zero will be discussed later.
+
+\begin{definition}[Subnormal number]
+  A non-zero floating point number with magnitude less than the
+  magnitude of the smallest normal number, and which does not use the
+  full precision available to normal numbers.
+\end{definition}
 
 \subsection{Bit Vector Representation}
 \label{sec:float-bits}
