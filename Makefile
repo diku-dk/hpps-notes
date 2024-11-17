@@ -1,3 +1,3 @@
-.PHONY: notes.pdf
-notes.pdf:
-	latexmk -pdf notes.tex
+.PHONY: hpps-notes.pdf
+hpps-notes.pdf:
+	latexmk -pdf hpps-notes.tex

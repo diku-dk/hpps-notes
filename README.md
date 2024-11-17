@@ -2,7 +2,7 @@
 
 A slowly growing collection of material for use in HPPS.
 
-[The most recent PDF.](https://github.com/diku-dk/hpps-notes/releases/download/latest/notes.pdf)
+[The most recent PDF.](https://github.com/diku-dk/hpps-notes/releases/download/latest/hpps-notes.pdf)
 
 If you find any typos, errors, or incomprehensible explanations,
 please open an issue above.

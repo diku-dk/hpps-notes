@@ -9,14 +9,14 @@ jobs:
       - name: Compile LaTeX document
         uses: xu-cheng/latex-action@v2
         with:
-          root_file: notes.tex
+          root_file: hpps-notes.tex
           latexmk_shell_escape: true
 
       - name: upload PDF
         uses: actions/upload-artifact@v4
         with:
           name: PDF
-          path: notes.pdf
+          path: hpps-notes.pdf
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
@@ -25,4 +25,4 @@ jobs:
           prerelease: true
           title: "Latest PDF"
           files: |
-            notes.pdf
+            hpps-notes.pdf
