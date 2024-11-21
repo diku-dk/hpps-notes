@@ -92,17 +92,19 @@ in base 2. For example, the bit vector $\bitvector{1001}$ might be
 interpreted as an encoding of the number $1001_{2} = 9_{10}$. Note the
 subscripts used to denote the \emph{radix} of the literals---we will
 include these whenever the radix would otherwise be ambiguous.
-However, it is important to note that a $\bitvector{1001}$ \emph{is
-  not the same} as $1001_{2}$! They are objects in completely
+However, it is important to note that $\bitvector{1001}$ \emph{is not
+  the same} as $1001_{2}$! They are mathematical objects in completely
 different domains, and it makes no sense to say that they are equal or
 unequal. It is merely a quirk of notation that they look similar when
 written down, and we shall soon enough see encodings where this is not
 the case.
 
 To completely specify the encoding of natural numbers, we must define
-how a bit vector of length $w$ is interpreted as a number.  Here we do
-treat single bits as numbers, $0$ or $1$, and multiply them with a
-\emph{weight}.
+how a bit vector of length $w$ is interpreted as a number. Here we do
+interpret single bits as numbers, $0$ or $1$, and multiply them with a
+\emph{weight}. Specifically, bit number $i$ (counting from right to
+left, starting from 0) is multiplied with the weight $2^{i}$, and the
+results summed.
 
 \begin{definition}[Bit vector to natural number]
 \begin{align*}
@@ -121,7 +123,7 @@ treat single bits as numbers, $0$ or $1$, and multiply them with a
 \end{example}
 
 The conversion of a number to a bit vector is slightly less pleasant,
-and is defined by the following recursive procedure.
+and is defined by the following recursive function.
 
 \begin{definition}[Natural number to $w$-bit vector]
   \begin{align}
@@ -157,14 +159,14 @@ therefore called \emph{unsigned}, because there can be no leading
 minus sign. In \cref{sec:signed-numbers} we will discuss negative
 numbers.
 
-When $x \geq 2^{w}$, then $x$ cannot be encoded with a $w$-bit vector
-by \cref{def:n2bits}.  Intuitively, $x$ is \emph{truncated} and only
-the lower $w$ bits of its ``full'' representation is included.  This
-is an example of \emph{overflow}, which we will return to in
-\cref{sec:overflow}.  If we wished, we could also have designated a
+When $x \geq 2^{w}$, then $x$ cannot be encoded exactly with a $w$-bit
+vector by \cref{def:n2bits}. Intuitively, $x$ is \emph{truncated} and
+only the lower $w$ bits of its ``full'' representation is included.
+This is an example of \emph{overflow}, which we will return to in
+\cref{sec:overflow}. If we wished, we could also have designated a
 single distinct bit pattern to encode all numbers that otherwise have
-no encoding, which would let us detect anomalous cases.  We will see
-an example of such an encoding in \cref{chap:floats}.
+no encoding, which would let us detect anomalous cases. We will see an
+example of such an encoding in \cref{chap:floats}.
 
 Having an encoding of numbers is not terribly useful unless we can
 also perform \emph{operations}, such as arithmetic, on numbers
@@ -219,13 +221,15 @@ operators.  For example, the \emph{negated-and} operator can be defined as
 
 Interestingly, it turns out that the nand operation is universal, in
 that \emph{any} boolean function can be written using a combination of
-nand operations.  Examples:
+nand operations.
 
+\begin{example}[Universality of nand]
 \begin{align}
   \neg p &= \mathrm{nand}(p,p) \\
   p \land q &= \mathrm{nand}(\mathrm{nand}(p,q),\mathrm{nand}(p,q)) \\
   p \lor q &= \mathrm{nand}(\mathrm{nand}(p,p),\mathrm{nand}(q,q))
 \end{align}
+\end{example}
 
 \subsection{Boolean Operations as Bits}
 
