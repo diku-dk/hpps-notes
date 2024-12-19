@@ -229,6 +229,7 @@ parallel programming languages, that do not expose this abstraction,
 and are truly parallel without exposing any concurrency.
 
 \section{Reductions}
+\label{sec:reductions}
 
 A loop whose iterations are completely independent can be parallelised
 with the \lstinline{#pragma omp parallel for} directive, as shown
@@ -482,6 +483,101 @@ loops.  But if we do not see the performance gains we would expect,
 and we see in a process monitor that some of our processors are idle
 while our program is running, it is worth considering whether our
 loops could benefit from a scheduling clause.
+
+\section{Parallel Partitioning}
+\label{sec:parallel-partitioning}
+
+Most uses of OpenMP involve loops where the iterations are fully
+independent and can be executed in parallel. \Cref{sec:reductions}
+showed how certain patterns of not-entirely-parallel loops can be
+handled via reduction clauses. However, reduction clauses are a rather
+inflexible mechanism. In this section we will look at a more general
+approach to parallelisation. The overall idea is to break a problem
+apart in independent subproblems, solve each subproblem independently,
+them combine them at the end.
+
+\subsection{List homomorphisms}
+
+\newcommand\concat{\mathbin{+\mkern-10mu+}}
+
+The theoretical basis for our approach is \emph{list homomorphisms}.
+For the purpose of this section, a list is a mathematical object
+containing an ordered sequence of objects, not specifically a linked
+list. Lists are written as zero or more objects closed in square
+brackets, the concatenation of two lists $x$ and $y$ is written as
+$x\concat y$.
+
+\begin{example}[List concatenation]
+  \begin{align}
+    [1,2,3]&\concat[4,5,6] &&= [1,2,3,4,5,6] \\
+    []&\concat[1,2,3] &&= [1,2,3] \\
+    [1,2,3]&\concat[] &&= [1,2,3]
+  \end{align}
+\end{example}
+
+There are many operations we may wish to perform on lists: summing
+them, sorting them, filtering them, and so on. In many cases, we can
+perform such operations by splitting the list into two or more parts,
+process the parts independently, then combine the results of
+processing the parts. This is similar to the principle of \emph{divide
+  and conquer} that you may be familiar with from algorithmics. A list
+homomorphism is exactly a function that be computed in this manner.
+
+\begin{definition}[List homomorphism]
+  A function $h$ on lists is a list homomorphism when there exists
+  some associative binary operator $\odot{}$ such that
+
+\[
+  h (x \concat y) = h x \odot h y
+\]
+for any $x$ and $y$.
+\end{definition}
+
+\begin{example}[Summation is a list homomorphism with $\odot=+$]
+  \[
+    \textrm{sum}(x \concat y) = sum(x) + sum(y)
+  \]
+\end{example}
+
+Sometimes we leave the case of an empty input implicit, in which case
+it is the neutral element for the operator. In the case of summation,
+that is zero. We may also allow the case of a single-element argument
+(or any finite length) to be specified explicitly.
+
+\begin{example}[Filtering negative numbers is a list homomorphism]
+  \[
+    \begin{array}{l}
+      \textrm{filter}([x]) =
+      \begin{cases}
+        [x] & x \geq 0 \\
+        [] & x < 0 \
+      \end{cases}\\
+      \textrm{filter}(x \concat y) = \textrm{filter}(x) \concat \textrm{filter}(y)
+    \end{array}
+  \]
+\end{example}
+
+
+This does not strictly speaking extend the expressivity of list
+homomorphisms, as this behaviour could otherwise be encoded in
+$\odot$.
+
+Operationally, when computing a list homomorphism we can split the
+input into any number of chunks, compute a result per chunk, and then
+combine the results into a final result for the whole list. Each chunk
+can be processed independently of the others, in parallel. We will now
+turn our attention to how to implement this idea with OpenMP.
+
+\subsection{Implementation with OpenMP}
+
+When using OpenMP, our ``lists'' are arrays (or iterations of a loop),
+and we do not usually physically split and concatenate them, as moving
+data around in memory is expensive. We will also recursively split
+problems into ever smaller parts, as one might do in a classic
+divide-and-conquer problem. In general, the problem of how to
+partition work among processors can be quite challenging, but our
+approach will be rather simple: if we have $P$ processors available,
+we will split the problem into $P$ independent parts.
 
 \section{The Big Concurrency Problems}
 
