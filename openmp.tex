@@ -568,7 +568,7 @@ combine the results into a final result for the whole list. Each chunk
 can be processed independently of the others, in parallel. We will now
 turn our attention to how to implement this idea with OpenMP.
 
-\subsection{Implementation with OpenMP}
+\subsection{Explicit Work Partioning in OpenMP}
 
 When using OpenMP, our ``lists'' are arrays (or iterations of a loop),
 and we do not usually physically split and concatenate them, as moving
@@ -577,7 +577,95 @@ problems into ever smaller parts, as one might do in a classic
 divide-and-conquer problem. In general, the problem of how to
 partition work among processors can be quite challenging, but our
 approach will be rather simple: if we have $P$ processors available,
-we will split the problem into $P$ independent parts.
+we will split the problem into $P$ independent parts. To do this in
+OpenMP, we need to have more fine grained control of how the parallel
+execution is performed. Specifically, we must make use of OpenMP's
+notion of a \emph{parallel region}, as distinct from a parallel loop.
+
+A parallel region is written as the directive \texttt{\#pragma omp
+  parallel} followed by a brace-delimited block (\emph{not} a loop).
+When a parallel region is encountered, it is executed by each of the
+threads. For example, the code
+\begin{lstlisting}[language=C]
+#pragma omp parallel
+{
+  printf("hello!\n");
+}
+\end{lstlisting}
+would result in a line of output from each thread (perhaps
+intermixed). Each thread executing a parallel region is executing the
+same code. However, a thread can use the function
+\texttt{omp\_get\_thread\_num()} (available from \texttt{omp.h}) to
+retrieve its number as an integer, which can be used to make different
+threads perform different tasks---or operate on different parts of the
+input. This approach to parallel computing is known as \emph{data
+  parallelism}.
+
+\begin{definition}[Data parallelism]
+  Simultaneously performing \textit{the same} operation on different
+  pieces of the same data.
+\end{definition}
+
+\begin{figure}
+\lstinputlisting[
+caption={Vector addition with loop iterations automatically distributed among the thread.},
+label={lst:openmp-vecadd-implicit},
+language=C,
+frame=single,
+firstline=1,
+lastline=8]
+{src/openmp-vecadd.c}
+\end{figure}
+
+\begin{figure}
+\lstinputlisting[
+caption={Vector addition with explicit distribution of work. Note the absence of \textbf{for} in the OpenMP directive.},
+label={lst:openmp-vecadd-explicit},
+language=C,
+frame=single,
+firstline=10,
+lastline=30]
+{src/openmp-vecadd.c}
+\end{figure}
+
+
+\Cref{lst:openmp-vecadd-implicit} shows an implementation of vector
+addition using an OpenMP directive to split the iterations of a loop
+among the threads, with the specifics decided by the runtime system.
+This is the approach we saw previously.
+
+\Cref{lst:openmp-vecadd-explicit} shows another way of parallelising
+vector addition, where we explicitly carve the input into chunks of
+size $\frac{n}{P}$ and let each of the $P$ threads process one chunk.
+Given vectors of size $n$ and $P$ threads, we can make thread $t$
+compute the iterations in the range
+$[t\cdot \frac{n}{P},(t+1)\cdot \frac{n}{P})$, with the final thread
+extending its chunk all the way to $n$, to deal with the case where
+$n$ is not divisible by $p$. For this problem there is no advantage to
+being explicit, but it demonstrates the idea of explicit partitioning
+in a simple setting.
+
+All variables declared inside a parallel region are private to each
+thread. For example, each thread has its own distinct \texttt{t}
+variable. However, all variables declared outside the parallel region
+will be visible to all threads, including any changes made to them.
+Any memory allocated inside or outside the parallel region is also
+accessible to all threads. We can use this to construct arbitrarily
+complicated thread-local partial results.
+
+\subsection{Thread-Local Partial Results}
+
+\begin{figure}
+\lstinputlisting[
+caption={Vector summation using explicit work distribution.},
+label={lst:openmp-partition-sum},
+language=C,
+frame=single,
+firstline=1,
+lastline=37]
+{src/openmp-partition-sum.c}
+\end{figure}
+
 
 \section{The Big Concurrency Problems}
 

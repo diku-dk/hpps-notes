@@ -1,5 +1,4 @@
 #include <omp.h>
-#include <stdio.h>
 
 int sum(int n, int* A) {
   int P = omp_get_max_threads();
@@ -39,6 +38,7 @@ int sum(int n, int* A) {
 
 #include "timing.h"
 #include <assert.h>
+#include <stdio.h>
 
 int main(int argc, char** argv) {
   assert(argc==2);
