@@ -674,7 +674,10 @@ The basic technique behind explicit work partioning is to allocate a
 parallel region where each thread processes a chunk of the input and
 writes a result to its corresponding element to the results array,
 then after the final region we have a sequential loop that aggregates
-the results array to a single final result.
+the results array to a single final result. Since this final loop only
+has one iteration per thread, which is usually a very low number (and
+s constant irrespective of the input size), sequential execution poses
+no performance problem in this case.
 
 \Cref{lst:openmp-partition-sum} shows an implementation of vector
 summation using this technique. The integer array \texttt{sums}
@@ -800,7 +803,7 @@ frame=single
   return p;
 \end{lstlisting}
 
-Although it only runs for \texttt{P} iterations, the \texttt{memcpy}
+Although it only runs for \texttt{P} iterations, the \texttt{memcpy()}
 operation is likely to be expensive. Because this loop both reads and
 writes the output index \texttt{p}, it \emph{must} be sequential. For
 some filtering problems this may be acceptable: if we expect that the
