@@ -504,7 +504,7 @@ them combine them at the end.
 The theoretical basis for our approach is \emph{list homomorphisms}.
 For the purpose of this section, a list is a mathematical object
 containing an ordered sequence of objects, not specifically a linked
-list. Lists are written as zero or more objects closed in square
+list. Lists are written as zero or more objects enclosed in square
 brackets, the concatenation of two lists $x$ and $y$ is written as
 $x\concat y$.
 
@@ -529,7 +529,7 @@ homomorphism is exactly a function that be computed in this manner.
   some associative binary operator $\odot{}$ such that
 
 \[
-  h (x \concat y) = h x \odot h y
+  h (x \concat y) = h(x) \odot h(y)
 \]
 for any $x$ and $y$.
 \end{definition}
