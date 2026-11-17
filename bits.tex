@@ -147,7 +147,7 @@ with bit vectors of some fixed size. We will return to this in
 \begin{align}
   \mathrm{N2Bits}_{4}(9) &= \mathrm{N2Bits}_{4}(2\cdot{}4 + 1) \\
             &= \mathrm{N2Bits}_{3}(4) \bitvector{1} \\
-            &= \mathrm{N2Bits}_{2}(2) \bitvector{1} \bitvector{1} \\
+            &= \mathrm{N2Bits}_{2}(2) \bitvector{0} \bitvector{1} \\
             &= \mathrm{N2Bits}_{1}(1) \bitvector{0} \bitvector{0} \bitvector{1} \\
             &= \bitvector{1} \bitvector{0} \bitvector{0} \bitvector{1} \\
             &= \bitvector{1001}
@@ -370,8 +370,8 @@ The result is $s=\bitvector{10100}$ with no carry.  In terms of bit
 operations, we can express the computation of sums and carries as
 follows (recall that $\oplus$ means exclusive-or):
 \begin{align}
-  s_{0} &= x_{i} \oplus y_{i} \label{eqn:s0} \\
-  c_{0} &= x_{i} \land y_{i} \label{eqn:c0} \\
+  s_{0} &= x_{0} \oplus y_{0} \label{eqn:s0} \\
+  c_{0} &= x_{0} \land y_{0} \label{eqn:c0} \\
   s_{i} &= x_{i} \oplus y_{i} \oplus c_{i-1} \label{eqn:si} \\
   c_{i} &= (x_{i} \land y_{i})\lor ((x_{i}\lor y_{i})\land c_{i-1}) \label{eqn:ci}
 \end{align}
